@@ -1,0 +1,165 @@
+import { database, getTransactionsCollection, getCategoriesCollection, getBudgetsCollection } from '../../database';
+import { Q } from '@nozbe/watermelondb';
+import { Transaction } from '../../database/models/Transaction';
+
+export interface CreateTransactionDTO {
+  amount: number;
+  type: 'income' | 'expense';
+  categoryId: string;
+  note?: string;
+  date: number;
+  isRecurring?: boolean;
+  recurringType?: string | null;
+  location?: string | null;
+}
+
+class TransactionService {
+  // Создать транзакцию
+  async createTransaction(data: CreateTransactionDTO): Promise<Transaction> {
+    return await database.write(async () => {
+      const transactions = getTransactionsCollection();
+      const existingCount = await transactions.query().fetch();
+      //   const budgets = await database.get('budgets').query().fetch();
+      //  for (const item of [...budgets]) {
+      //   await item.destroyPermanently();
+      // }
+      console.log('sdfsdfdsf0', existingCount, data)
+      return await transactions.create((transaction: any) => {
+        transaction.amount = data.amount;
+        transaction.type = data.type;
+        transaction.categoryId = data.categoryId;
+        transaction.note = data.note || '';
+        transaction.date = data.date;
+        transaction.isRecurring = data.isRecurring || false;
+        transaction.recurringType = data.recurringType || null;
+        transaction.location = data.location || null;
+        transaction.attachments = [];
+        // transaction.createdAt = Date.now();
+        // transaction.updatedAt = Date.now();
+      });
+    });
+  }
+
+  // Получить транзакции за период
+  async getTransactionsByPeriod(startDate: number, endDate: number) {
+    const transactions = getTransactionsCollection();
+    return await transactions
+      .query(
+        Q.where('date', Q.between(startDate, endDate)),
+        Q.sortBy('date', Q.desc)
+      )
+      .fetch();
+  }
+
+  // Получить транзакции по категории
+  async getTransactionsByCategory(categoryId: string, limit: number = 50) {
+    const transactions = getTransactionsCollection();
+    return await transactions
+      .query(
+        Q.where('category_id', categoryId),
+        Q.sortBy('date', Q.desc),
+        Q.take(limit)
+      )
+      .fetch();
+  }
+
+  // Получить последние транзакции
+  async getRecentTransactions(limit: number = 20) {
+    const transactions = getTransactionsCollection();
+    console.log('tetrtrter', await transactions.query())
+    return await transactions
+      .query(
+        Q.sortBy('date', Q.desc),
+        Q.take(limit)
+      )
+      .fetch();
+  }
+
+  // Получить статистику за период
+  async getStatistics(startDate: number, endDate: number) {
+    const transactions = await this.getTransactionsByPeriod(startDate, endDate);
+    
+    let totalIncome = 0;
+    let totalExpense = 0;
+    const byCategory: Record<string, number> = {};
+
+    transactions.forEach((t: any) => {
+      if (t.type === 'income') {
+        totalIncome += t.amount;
+      } else {
+        totalExpense += t.amount;
+        byCategory[t.categoryId] = (byCategory[t.categoryId] || 0) + t.amount;
+      }
+    });
+
+    // Получаем названия категорий
+    const categories = await getCategoriesCollection().query().fetch();
+    const categoryMap = new Map(categories.map(c => [c.id, c]));
+
+    const categoryStats = Object.entries(byCategory).map(([id, amount]) => ({
+      categoryId: id,
+      categoryName: categoryMap.get(id)?.name || 'Unknown',
+      categoryIcon: categoryMap.get(id)?.icon || 'help',
+      categoryColor: categoryMap.get(id)?.color || '#95A5A6',
+      amount,
+    }));
+
+    return {
+      totalIncome,
+      totalExpense,
+      balance: totalIncome - totalExpense,
+      byCategory: categoryStats,
+      transactionCount: transactions.length,
+    };
+  }
+
+  // Удалить транзакцию
+  async deleteTransaction(id: string) {
+    return await database.write(async () => {
+      const transactions = getTransactionsCollection();
+      const transaction = await transactions.find(id);
+      await transaction.destroyPermanently();
+    });
+  }
+
+  // Обновить транзакцию
+  async updateTransaction(id: string, data: Partial<CreateTransactionDTO>) {
+    return await database.write(async () => {
+      const transactions = getTransactionsCollection();
+      const transaction = await transactions.find(id);
+      return await transaction.update((record: any) => {
+        if (data.amount !== undefined) record.amount = data.amount;
+        if (data.type !== undefined) record.type = data.type;
+        if (data.categoryId !== undefined) record.categoryId = data.categoryId;
+        if (data.note !== undefined) record.note = data.note;
+        if (data.date !== undefined) record.date = data.date;
+        if (data.location !== undefined) record.location = data.location;
+        record.updatedAt = Date.now();
+      });
+    });
+  }
+
+  // Получить баланс на определенную дату
+  async getBalanceUntilDate(date: number) {
+    const transactions = getTransactionsCollection();
+    const allTransactions = await transactions
+      .query(
+        Q.where('date', Q.lte(date)),
+        Q.sortBy('date', Q.asc)
+      )
+      .fetch();
+
+    let balance = 0;
+    allTransactions.forEach((t: any) => {
+      if (t.type === 'income') {
+        balance += t.amount;
+      } else {
+        balance -= t.amount;
+      }
+    });
+
+    return balance;
+  }
+}
+
+export default new TransactionService();
