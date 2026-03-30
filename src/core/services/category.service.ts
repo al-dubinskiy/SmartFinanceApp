@@ -28,7 +28,7 @@ class CategoryService {
         category.type = data.type;
         category.icon = data.icon;
         category.color = data.color;
-        category.parentId = data.parentId || null;   // важно: null, а не ''
+        category.parentId = data.parentId || null; // важно: null, а не ''
         category.order = data.order || maxOrder + 1;
         category.isActive = true;
         category.createdAt = Date.now();
@@ -37,7 +37,7 @@ class CategoryService {
     });
   }
 
-  // Получить дерево категорий (улучшенная версия)
+   // Получить дерево категорий (улучшенная версия)
   async getCategoryTree(type: 'income' | 'expense') {
     const categories = await this.getCategoriesByType(type);
     
@@ -74,6 +74,12 @@ class CategoryService {
     return tree;
   }
 
+  // Получить все категории (включая подкатегории)
+  async getAllCategories() {
+    const categories = getCategoriesCollection();
+    return await categories.query(Q.sortBy('order', Q.asc)).fetch();
+  }
+
   // Получить все активные категории по типу (плоско)
   async getCategoriesByType(type: 'income' | 'expense') {
     const categories = getCategoriesCollection();
@@ -81,9 +87,14 @@ class CategoryService {
       .query(
         Q.where('type', type),
         Q.where('is_active', true),
-        Q.sortBy('order', Q.asc)
+        Q.sortBy('order', Q.asc),
       )
       .fetch();
+  }
+
+  async getCategoryById(id: string) {
+    const categories = getCategoriesCollection();
+    return await categories.find(id);
   }
 
   // УДАЛЕНИЕ категории (полное + каскадное)
@@ -119,11 +130,42 @@ class CategoryService {
         if (data.name !== undefined) record.name = data.name;
         if (data.icon !== undefined) record.icon = data.icon;
         if (data.color !== undefined) record.color = data.color;
-        if (data.parentId !== undefined) record.parentId = data.parentId || null;
+        if (data.parentId !== undefined)
+          record.parentId = data.parentId || null;
         if (data.order !== undefined) record.order = data.order;
         record.updatedAt = Date.now();
       });
     });
+  }
+
+  async getCategoriesByTypeWithTree(
+    type: 'income' | 'expense',
+  ): Promise<any[]> {
+    const categories = await this.getCategoriesByType(type);
+    return this.buildTree(categories);
+  }
+
+  private buildTree(categories: any[]): any[] {
+    const map = new Map<string, any>();
+    const roots: any[] = [];
+
+    // Создаем маппинг
+    categories.forEach(cat => {
+      map.set(cat.id, { ...cat, children: [] });
+    });
+
+    // Строим дерево
+    categories.forEach(cat => {
+      const node = map.get(cat.id);
+      if (cat.parentId && map.has(cat.parentId)) {
+        const parent = map.get(cat.parentId);
+        parent.children.push(node);
+      } else {
+        roots.push(node);
+      }
+    });
+
+    return roots;
   }
 }
 

@@ -34,13 +34,17 @@ export const EditTransactionScreen: React.FC<EditTransactionScreenProps> = ({
 }) => {
   const { colors } = useTheme();
   const { transactionId } = route.params;
-  
+
   const [transaction, setTransaction] = useState<any>(null);
   const [categories, setCategories] = useState<any[]>([]);
   const [amount, setAmount] = useState<string>('');
   const [note, setNote] = useState<string>('');
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
-  const [transactionType, setTransactionType] = useState<'income' | 'expense'>('expense');
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
+    null,
+  );
+  const [transactionType, setTransactionType] = useState<'income' | 'expense'>(
+    'expense',
+  );
   const [date, setDate] = useState<Date>(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -60,9 +64,10 @@ export const EditTransactionScreen: React.FC<EditTransactionScreenProps> = ({
     try {
       const found = await transactionService.getTransactionById(transactionId);
       setTransaction(found);
-      
+
       if (found) {
-        const raw = found._raw || found;
+        const raw: any = found._raw || found;
+        console.log('sdfsfsdfsdff', raw);
         setAmount(raw.amount?.toString() || '0');
         setNote(raw.note || '');
         setSelectedCategoryId(raw.category_id);
@@ -79,17 +84,16 @@ export const EditTransactionScreen: React.FC<EditTransactionScreenProps> = ({
 
   const loadCategories = async () => {
     try {
-      const cats = await categoryService.getCategoriesByType(transactionType);
+      const cats = await categoryService.getCategoriesByTypeWithTree(transactionType);
       setCategories(cats);
-      
+
       // Проверяем, что выбранная категория существует в новом типе
       if (selectedCategoryId) {
-        const categoryExists = cats.some(c => c.id === selectedCategoryId);
+        const categoryExists = cats.some(c => c._raw.id === selectedCategoryId);
+
         if (!categoryExists && cats.length > 0) {
-          setSelectedCategoryId(cats[0].id);
+          setSelectedCategoryId(cats[0]?._raw?.id);
         }
-      } else if (cats.length > 0) {
-        setSelectedCategoryId(cats[0].id);
       }
     } catch (error) {
       console.error('Failed to load categories:', error);
@@ -99,18 +103,18 @@ export const EditTransactionScreen: React.FC<EditTransactionScreenProps> = ({
   const handleAmountChange = (text: string) => {
     // Разрешаем только цифры и точку
     let cleaned = text.replace(/[^0-9.]/g, '');
-    
+
     // Защита от множественных точек
     const parts = cleaned.split('.');
     if (parts.length > 2) {
       cleaned = parts[0] + '.' + parts.slice(1).join('');
     }
-    
+
     // Ограничиваем 2 знака после запятой
     if (parts.length === 2 && parts[1].length > 2) {
       cleaned = parts[0] + '.' + parts[1].slice(0, 2);
     }
-    
+
     setAmount(cleaned);
   };
 
@@ -144,7 +148,7 @@ export const EditTransactionScreen: React.FC<EditTransactionScreenProps> = ({
         note: note.trim() || undefined,
         date: date.getTime(),
       });
-      
+
       navigation.goBack();
     } catch (error) {
       console.error('Failed to update transaction:', error);
@@ -172,7 +176,7 @@ export const EditTransactionScreen: React.FC<EditTransactionScreenProps> = ({
             }
           },
         },
-      ]
+      ],
     );
   };
 
@@ -184,7 +188,12 @@ export const EditTransactionScreen: React.FC<EditTransactionScreenProps> = ({
 
   if (isLoading) {
     return (
-      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+      <View
+        style={[
+          styles.loadingContainer,
+          { backgroundColor: colors.background },
+        ]}
+      >
         <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
@@ -198,7 +207,10 @@ export const EditTransactionScreen: React.FC<EditTransactionScreenProps> = ({
     >
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.surface }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backIcon}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backIcon}
+        >
           <Icon name="arrow-left" size={24} color={colors.text.primary} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text.primary }]}>
@@ -209,13 +221,15 @@ export const EditTransactionScreen: React.FC<EditTransactionScreenProps> = ({
         </TouchableOpacity>
       </View>
 
-      <ScrollView 
+      <ScrollView
         style={styles.content}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
         {/* Type Selector */}
-        <View style={[styles.typeSelector, { backgroundColor: colors.surface }]}>
+        <View
+          style={[styles.typeSelector, { backgroundColor: colors.surface }]}
+        >
           <TouchableOpacity
             style={[
               styles.typeButton,
@@ -228,15 +242,20 @@ export const EditTransactionScreen: React.FC<EditTransactionScreenProps> = ({
             <Icon
               name="arrow-down"
               size={20}
-              color={transactionType === 'expense' ? colors.error : colors.text.secondary}
+              color={
+                transactionType === 'expense'
+                  ? colors.error
+                  : colors.text.secondary
+              }
             />
             <Text
               style={[
                 styles.typeText,
                 {
-                  color: transactionType === 'expense'
-                    ? colors.error
-                    : colors.text.secondary,
+                  color:
+                    transactionType === 'expense'
+                      ? colors.error
+                      : colors.text.secondary,
                 },
               ]}
             >
@@ -256,15 +275,20 @@ export const EditTransactionScreen: React.FC<EditTransactionScreenProps> = ({
             <Icon
               name="arrow-up"
               size={20}
-              color={transactionType === 'income' ? colors.success : colors.text.secondary}
+              color={
+                transactionType === 'income'
+                  ? colors.success
+                  : colors.text.secondary
+              }
             />
             <Text
               style={[
                 styles.typeText,
                 {
-                  color: transactionType === 'income'
-                    ? colors.success
-                    : colors.text.secondary,
+                  color:
+                    transactionType === 'income'
+                      ? colors.success
+                      : colors.text.secondary,
                 },
               ]}
             >
@@ -274,17 +298,19 @@ export const EditTransactionScreen: React.FC<EditTransactionScreenProps> = ({
         </View>
 
         {/* Amount Input */}
-        <View style={[styles.amountContainer, { backgroundColor: colors.surface }]}>
+        <View
+          style={[styles.amountContainer, { backgroundColor: colors.surface }]}
+        >
           <Text style={[styles.amountLabel, { color: colors.text.secondary }]}>
             Amount
           </Text>
           <TextInput
             style={[
               styles.amountInput,
-              { 
+              {
                 color: colors.text.primary,
                 fontFamily: 'monospace',
-              }
+              },
             ]}
             placeholder="0.00"
             placeholderTextColor={colors.text.secondary}
@@ -293,13 +319,17 @@ export const EditTransactionScreen: React.FC<EditTransactionScreenProps> = ({
             onChangeText={handleAmountChange}
             editable={!isSaving}
           />
-          <Text style={[styles.amountPreview, { color: colors.text.secondary }]}>
+          <Text
+            style={[styles.amountPreview, { color: colors.text.secondary }]}
+          >
             {formatDisplayAmount()}
           </Text>
         </View>
 
         {/* Note Input */}
-        <View style={[styles.noteContainer, { backgroundColor: colors.surface }]}>
+        <View
+          style={[styles.noteContainer, { backgroundColor: colors.surface }]}
+        >
           <Icon name="pencil" size={20} color={colors.text.secondary} />
           <TextInput
             style={[styles.noteInput, { color: colors.text.primary }]}

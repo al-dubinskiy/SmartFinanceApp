@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Animated,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
@@ -13,8 +12,8 @@ import { formatCurrency, formatDate } from '../../../core/utils/formatters';
 
 interface TransactionItemProps {
   transaction: any;
-  onPress: (transaction: any) => void;
-  onDelete: (transaction: any) => void;
+  onPress: () => void;
+  onDelete: () => void;
 }
 
 export const TransactionItem: React.FC<TransactionItemProps> = ({
@@ -25,59 +24,48 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
   const { colors } = useTheme();
   const swipeableRef = React.useRef<Swipeable>(null);
 
-  // Получаем данные из _raw или напрямую из модели
-  const getRawData = () => {
-    if (transaction._raw) {
-      return transaction._raw;
-    }
-    return transaction;
-  };
-
-  const raw = getRawData();
-  
-  // Получаем значения
-  const id = transaction.id || raw.id;
-  const amount = raw.amount || transaction.amount;
-  const type = raw.type || transaction.type;
-  const note = raw.note || transaction.note;
-  const date = raw.date || transaction.date;
-  const category = transaction.category || raw.category;
-
   const renderRightActions = () => {
     return (
       <TouchableOpacity
         style={[styles.deleteButton, { backgroundColor: colors.error }]}
         onPress={() => {
           swipeableRef.current?.close();
-          onDelete(raw);
+          onDelete();
         }}
       >
         <Icon name="delete" size={24} color="#FFFFFF" />
-        <Text style={styles.deleteText}>Delete</Text>
+        <Text style={styles.deleteText}>Удалить</Text>
       </TouchableOpacity>
     );
   };
+
+  // Получаем данные из переданного объекта
+  const amount = transaction.amount;
+  const type = transaction.type;
+  const note = transaction.note;
+  const date = transaction.date;
+  const category = transaction.category;
 
   const amountColor = type === 'income' ? colors.success : colors.error;
   const amountPrefix = type === 'income' ? '+' : '-';
   
   const getFormattedDate = () => {
     if (!date || isNaN(date)) {
-      return 'Date not set';
+      return 'Дата не указана';
     }
     return formatDate(date);
   };
   
   const getFormattedAmount = () => {
     if (!amount || isNaN(amount)) {
-      return '$0.00';
+      return '0 ₽';
     }
-    return formatCurrency(amount);
+    return formatCurrency(amount, 'RUB');
   };
 
-  const categoryName = category?.name || raw.category_name || 'Unknown';
-  const categoryIcon = category?.icon || raw.category_icon || 'help';
-  const categoryColor = category?.color || raw.category_color || colors.text.secondary;
+  const categoryName = category?.name || 'Без категории';
+  const categoryIcon = category?.icon || 'help-circle';
+  const categoryColor = category?.color || colors.text.secondary;
 
   return (
     <Swipeable
@@ -87,7 +75,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
     >
       <TouchableOpacity
         style={[styles.container, { backgroundColor: colors.surface }]}
-        onPress={() => onPress(raw)}
+        onPress={onPress}
         activeOpacity={0.7}
       >
         <View
@@ -165,11 +153,12 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     width: 80,
+    // height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
     borderRadius: 12,
-    marginVertical: 4
+    marginVertical: 4,
   },
   deleteText: {
     color: '#FFFFFF',

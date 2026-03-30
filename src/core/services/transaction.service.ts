@@ -1,4 +1,9 @@
-import { database, getTransactionsCollection, getCategoriesCollection, getBudgetsCollection } from '../../database';
+import {
+  database,
+  getTransactionsCollection,
+  getCategoriesCollection,
+  getBudgetsCollection,
+} from '../../database';
 import { Q } from '@nozbe/watermelondb';
 import { Transaction } from '../../database/models/Transaction';
 
@@ -23,7 +28,6 @@ class TransactionService {
       //  for (const item of [...budgets]) {
       //   await item.destroyPermanently();
       // }
-      console.log('sdfsdfdsf0', existingCount, data)
       return await transactions.create((transaction: any) => {
         transaction.amount = data.amount;
         transaction.type = data.type;
@@ -40,13 +44,17 @@ class TransactionService {
     });
   }
 
+  async getTransactionById(id: string) {
+    const transactions = getTransactionsCollection();
+    return await transactions.find(id);
+  }
   // Получить транзакции за период
   async getTransactionsByPeriod(startDate: number, endDate: number) {
     const transactions = getTransactionsCollection();
     return await transactions
       .query(
         Q.where('date', Q.between(startDate, endDate)),
-        Q.sortBy('date', Q.desc)
+        Q.sortBy('date', Q.desc),
       )
       .fetch();
   }
@@ -58,7 +66,7 @@ class TransactionService {
       .query(
         Q.where('category_id', categoryId),
         Q.sortBy('date', Q.desc),
-        Q.take(limit)
+        Q.take(limit),
       )
       .fetch();
   }
@@ -66,19 +74,15 @@ class TransactionService {
   // Получить последние транзакции
   async getRecentTransactions(limit: number = 20) {
     const transactions = getTransactionsCollection();
-    console.log('tetrtrter', await transactions.query())
     return await transactions
-      .query(
-        Q.sortBy('date', Q.desc),
-        Q.take(limit)
-      )
+      .query(Q.sortBy('date', Q.desc), Q.take(limit))
       .fetch();
   }
 
   // Получить статистику за период
   async getStatistics(startDate: number, endDate: number) {
     const transactions = await this.getTransactionsByPeriod(startDate, endDate);
-    
+
     let totalIncome = 0;
     let totalExpense = 0;
     const byCategory: Record<string, number> = {};
@@ -143,10 +147,7 @@ class TransactionService {
   async getBalanceUntilDate(date: number) {
     const transactions = getTransactionsCollection();
     const allTransactions = await transactions
-      .query(
-        Q.where('date', Q.lte(date)),
-        Q.sortBy('date', Q.asc)
-      )
+      .query(Q.where('date', Q.lte(date)), Q.sortBy('date', Q.asc))
       .fetch();
 
     let balance = 0;

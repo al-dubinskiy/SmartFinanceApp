@@ -51,18 +51,18 @@ export const ProfileScreen = () => {
 
   const handleRemovePin = () => {
     Alert.alert(
-      'Remove PIN',
-      'Are you sure you want to remove PIN protection?',
+      'Удаление PIN-кода',
+      'Вы уверены, что хотите отключить защиту PIN-кодом?',
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: 'Отмена', style: 'cancel' },
         {
-          text: 'Remove',
+          text: 'Удалить',
           style: 'destructive',
           onPress: async () => {
             const result = await pinService.removePin();
             if (result.success) {
               setHasPin(false);
-              Alert.alert('Success', 'PIN code has been removed.');
+              Alert.alert('Готово', 'PIN-код успешно удалён.');
             }
           },
         },
@@ -76,7 +76,7 @@ export const ProfileScreen = () => {
       const filePath = await backupService.exportToJSON();
       await backupService.shareFile(filePath);
     } catch (error) {
-      Alert.alert('Error', 'Failed to export data');
+      Alert.alert('Ошибка', 'Не удалось экспортировать данные');
     } finally {
       setIsExporting(false);
     }
@@ -88,24 +88,22 @@ export const ProfileScreen = () => {
       const filePath = await backupService.exportToCSV();
       await backupService.shareFile(filePath);
     } catch (error) {
-      Alert.alert('Error', 'Failed to export CSV');
+      Alert.alert('Ошибка', 'Не удалось экспортировать CSV');
     } finally {
       setIsExporting(false);
     }
   };
 
   const handleImportBackup = async () => {
-    // Будет реализован выбор файла и импорт
     Alert.alert(
-      'Import Backup',
-      'This will replace all existing data. Make sure you have a backup first.',
+      'Импорт резервной копии',
+      'Это действие заменит все текущие данные. Убедитесь, что у вас есть резервная копия.',
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: 'Отмена', style: 'cancel' },
         {
-          text: 'Continue',
+          text: 'Продолжить',
           onPress: async () => {
-            // TODO: Реализовать выбор JSON файла
-            Alert.alert('Info', 'Feature coming soon');
+            Alert.alert('Информация', 'Функция скоро будет доступна');
           },
         },
       ],
@@ -113,10 +111,10 @@ export const ProfileScreen = () => {
   };
 
   const handleLogout = () => {
-    Alert.alert('Logout', 'Are you sure you want to logout?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert('Выход из аккаунта', 'Вы уверены, что хотите выйти?', [
+      { text: 'Отмена', style: 'cancel' },
       {
-        text: 'Logout',
+        text: 'Выйти',
         style: 'destructive',
         onPress: () => dispatch(logout()),
       },
@@ -167,7 +165,7 @@ export const ProfileScreen = () => {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* User Info */}
+        {/* Информация о пользователе */}
         <View style={[styles.userInfo, { backgroundColor: colors.surface }]}>
           <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
             <Text style={styles.avatarText}>
@@ -175,27 +173,27 @@ export const ProfileScreen = () => {
             </Text>
           </View>
           <Text style={[styles.userName, { color: colors.text.primary }]}>
-            {user?.displayName || 'User'}
+            {user?.displayName || 'Пользователь'}
           </Text>
           <Text style={[styles.userEmail, { color: colors.text.secondary }]}>
             {user?.email}
           </Text>
         </View>
 
-        {/* Appearance Section */}
+        {/* Внешний вид */}
         {renderSection(
-          'Appearance',
+          'Внешний вид',
           renderSettingItem(
             'theme-light-dark',
-            'Theme',
+            'Тема оформления',
             <Text
               style={[styles.settingValue, { color: colors.text.secondary }]}
             >
               {theme === 'light'
-                ? 'Light'
+                ? 'Светлая'
                 : theme === 'dark'
-                ? 'Dark'
-                : 'System'}
+                ? 'Тёмная'
+                : 'Как в системе'}
             </Text>,
             () => {
               const nextTheme =
@@ -209,19 +207,19 @@ export const ProfileScreen = () => {
           ),
         )}
 
-        {/* Security Section */}
+        {/* Безопасность */}
         {renderSection(
-          'Security',
+          'Безопасность',
           <>
             {renderSettingItem(
               'pin',
-              'PIN Code',
+              'PIN-код',
               hasPin ? (
                 <TouchableOpacity onPress={handleRemovePin}>
                   <Text
                     style={[styles.settingValue, { color: colors.success }]}
                   >
-                    Enabled
+                    Включён
                   </Text>
                 </TouchableOpacity>
               ) : (
@@ -231,31 +229,21 @@ export const ProfileScreen = () => {
                   <Text
                     style={[styles.settingValue, { color: colors.primary }]}
                   >
-                    Setup
+                    Настроить
                   </Text>
                 </TouchableOpacity>
               ),
             )}
-            {/* {renderSettingItem(
-              'fingerprint',
-              'Biometrics',
-              <Switch
-                value={isBiometricsEnabled}
-                onValueChange={(value) => dispatch(setBiometricsEnabled(value))}
-                trackColor={{ false: colors.border, true: colors.success }}
-                thumbColor="#FFFFFF"
-              />
-            )} */}
           </>,
         )}
 
-        {/* Preferences Section */}
+        {/* Настройки */}
         {renderSection(
-          'Preferences',
+          'Настройки',
           <>
             {renderSettingItem(
               'currency-usd',
-              'Currency',
+              'Валюта',
               <TouchableOpacity
                 onPress={() => {
                   const currencies = ['USD', 'EUR', 'GBP', 'UAH', 'RUB'];
@@ -274,7 +262,7 @@ export const ProfileScreen = () => {
             )}
             {renderSettingItem(
               'translate',
-              'Language',
+              'Язык',
               <TouchableOpacity
                 onPress={() => {
                   const languages = ['en', 'ru', 'uk'];
@@ -298,7 +286,7 @@ export const ProfileScreen = () => {
             )}
             {renderSettingItem(
               'bell',
-              'Notifications',
+              'Уведомления',
               <Switch
                 value={notificationsEnabled}
                 onValueChange={value =>
@@ -311,13 +299,13 @@ export const ProfileScreen = () => {
           </>,
         )}
 
-        {/* Data Management Section */}
+        {/* Управление данными */}
         {renderSection(
-          'Data Management',
+          'Управление данными',
           <>
             {renderSettingItem(
               'download',
-              'Export as JSON (Backup)',
+              'Экспорт в JSON (резервная копия)',
               isExporting ? (
                 <ActivityIndicator size="small" color={colors.primary} />
               ) : (
@@ -331,7 +319,7 @@ export const ProfileScreen = () => {
             )}
             {renderSettingItem(
               'file-csv',
-              'Export as CSV',
+              'Экспорт в CSV',
               isExporting ? (
                 <ActivityIndicator size="small" color={colors.primary} />
               ) : (
@@ -345,7 +333,7 @@ export const ProfileScreen = () => {
             )}
             {renderSettingItem(
               'upload',
-              'Import CSV from Bank',
+              'Импорт CSV из банка',
               <Icon
                 name="chevron-right"
                 size={20}
@@ -355,7 +343,7 @@ export const ProfileScreen = () => {
             )}
             {renderSettingItem(
               'restore',
-              'Restore from Backup',
+              'Восстановить из резервной копии',
               <Icon
                 name="chevron-right"
                 size={20}
@@ -365,7 +353,7 @@ export const ProfileScreen = () => {
             )}
             {renderSettingItem(
               'format-list-bulleted',
-              'Manage Categories',
+              'Управление категориями',
               <Icon
                 name="chevron-right"
                 size={20}
@@ -375,7 +363,7 @@ export const ProfileScreen = () => {
             )}
             {renderSettingItem(
               'file-chart',
-              'Detailed Reports',
+              'Подробные отчёты',
               <Icon
                 name="chevron-right"
                 size={20}
@@ -385,7 +373,7 @@ export const ProfileScreen = () => {
             )}
             {renderSettingItem(
               'database-refresh',
-              'Reset to Test Data',
+              'Загрузить тестовые данные',
               <Icon
                 name="chevron-right"
                 size={20}
@@ -393,16 +381,16 @@ export const ProfileScreen = () => {
               />,
               () => {
                 Alert.alert(
-                  'Reset Data',
-                  'This will replace all your data with test data. This action cannot be undone.',
+                  'Сброс данных',
+                  'Все текущие данные будут заменены тестовыми. Это действие нельзя отменить.',
                   [
-                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Отмена', style: 'cancel' },
                     {
-                      text: 'Reset',
+                      text: 'Сбросить',
                       style: 'destructive',
                       onPress: async () => {
                         await seedTestData();
-                        Alert.alert('Success', 'Test data has been loaded');
+                        Alert.alert('Готово', 'Тестовые данные загружены');
                       },
                     },
                   ],
@@ -412,13 +400,13 @@ export const ProfileScreen = () => {
           </>,
         )}
 
-        {/* About Section */}
+        {/* О приложении */}
         {renderSection(
-          'About',
+          'О приложении',
           <>
             {renderSettingItem(
               'information',
-              'Version',
+              'Версия',
               <Text
                 style={[styles.settingValue, { color: colors.text.secondary }]}
               >
@@ -427,35 +415,35 @@ export const ProfileScreen = () => {
             )}
             {renderSettingItem(
               'shield-check',
-              'Privacy Policy',
+              'Политика конфиденциальности',
               <Icon
                 name="chevron-right"
                 size={20}
                 color={colors.text.secondary}
               />,
-              () => Alert.alert('Privacy Policy', 'Coming soon'),
+              () => Alert.alert('Политика конфиденциальности', 'Скоро'),
             )}
             {renderSettingItem(
               'file-document',
-              'Terms of Service',
+              'Пользовательское соглашение',
               <Icon
                 name="chevron-right"
                 size={20}
                 color={colors.text.secondary}
               />,
-              () => Alert.alert('Terms of Service', 'Coming soon'),
+              () => Alert.alert('Пользовательское соглашение', 'Скоро'),
             )}
           </>,
         )}
 
-        {/* Logout Button */}
+        {/* Кнопка выхода */}
         <TouchableOpacity
           style={[styles.logoutButton, { borderColor: colors.error }]}
           onPress={handleLogout}
         >
           <Icon name="logout" size={24} color={colors.error} />
           <Text style={[styles.logoutText, { color: colors.error }]}>
-            Logout
+            Выйти из аккаунта
           </Text>
         </TouchableOpacity>
 
@@ -466,8 +454,7 @@ export const ProfileScreen = () => {
         visible={showCSVImport}
         onClose={() => setShowCSVImport(false)}
         onSuccess={() => {
-          // Обновляем данные после импорта
-          Alert.alert('Success', 'CSV imported successfully');
+          Alert.alert('Готово', 'CSV успешно импортирован');
         }}
       />
     </View>

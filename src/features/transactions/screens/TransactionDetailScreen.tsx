@@ -13,6 +13,7 @@ import { useTheme } from '../../../core/hooks/useTheme';
 import { formatCurrency, formatDate } from '../../../core/utils/formatters';
 import transactionService from '../../../core/services/transaction.service';
 import categoryService from '../../../core/services/category.service';
+import { useIsFocused } from '@react-navigation/native';
 
 interface TransactionDetailScreenProps {
   navigation: any;
@@ -27,6 +28,7 @@ export const TransactionDetailScreen: React.FC<
   TransactionDetailScreenProps
 > = ({ navigation, route }) => {
   const { colors } = useTheme();
+  const isFocus = useIsFocused();
   const { transactionId } = route.params;
 
   const [transaction, setTransaction] = useState<any>(null);
@@ -35,13 +37,12 @@ export const TransactionDetailScreen: React.FC<
 
   useEffect(() => {
     loadTransaction();
-  }, []);
+  }, [isFocus]);
 
   const loadTransaction = async () => {
     try {
       const transactions = await transactionService.getRecentTransactions(100);
-      console.log('sdfsdfsdfsd', transactions, transactionId)
-      const found = transactions.find(t => t.id === transactionId);
+      const found = transactions.find(t => t._raw.id === transactionId);
       setTransaction(found);
 
       if (found) {
@@ -350,7 +351,7 @@ const styles = StyleSheet.create({
   categoryIcon: {
     width: 56,
     height: 56,
-    borderRadius: 28,
+    borderRadius: 56,
     justifyContent: 'center',
     alignItems: 'center',
   },

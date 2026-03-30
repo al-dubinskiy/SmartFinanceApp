@@ -17,6 +17,7 @@ import categoryService from '../../../core/services/category.service';
 import { BalanceCard } from '../components/BalanceCard';
 import { TransactionItem } from '../components/TransactionItem';
 import { formatMonthYear } from '../../../core/utils/formatters';
+import { useIsFocused } from '@react-navigation/native';
 
 interface Stats {
   totalIncome: number;
@@ -26,6 +27,7 @@ interface Stats {
 
 export const HomeScreen: React.FC<MainTabScreenProps<'Home'>> = ({ navigation }) => {
   const { colors } = useTheme();
+  const isFocused = useIsFocused();
   const { user } = useAppSelector((state) => state.auth);
   
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -37,6 +39,11 @@ export const HomeScreen: React.FC<MainTabScreenProps<'Home'>> = ({ navigation })
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
+
+  // Функция для получения данных из _raw или напрямую
+  const getRawData = (item: any) => {
+    return item._raw || item;
+  };
 
   const loadData = useCallback(async () => {
     try {
@@ -52,24 +59,65 @@ export const HomeScreen: React.FC<MainTabScreenProps<'Home'>> = ({ navigation })
         balance: statistics.balance,
       });
 
-      const recent = await transactionService.getRecentTransactions(20);
+      const recent = await transactionService.getRecentTransactions(50);
       
-      const categories = await categoryService.getAllCategories();
-      const categoryMap = new Map(categories.map((c: any) => [c.id, c]));
+      // Получаем все категории для маппинга
+      const allCategories = await categoryService.getAllCategories();
+      const categoryMap = new Map<string, any>();
       
-      const transactionsWithCategories = recent.map((t: any) => ({
-        ...t,
-        category: categoryMap.get(t.categoryId),
-      }));
+      // Функция для рекурсивного добавления всех категорий (включая подкатегории)
+      const addCategoriesToMap = (cats: any[]) => {
+        cats.forEach(cat => {
+          const catData = cat._raw || cat;
+          categoryMap.set(catData.id, catData);
+          if (cat.children && cat.children.length > 0) {
+            addCategoriesToMap(cat.children);
+          }
+        });
+      };
       
-      setTransactions(transactionsWithCategories);
+      // Получаем деревья категорий для расходов и доходов
+      const expenseTree = await categoryService.getCategoriesByTypeWithTree('expense');
+      const incomeTree = await categoryService.getCategoriesByTypeWithTree('income');
+      
+      addCategoriesToMap(expenseTree);
+      addCategoriesToMap(incomeTree);
+      
+      // Форматируем транзакции для отображения
+      const formattedTransactions = recent.map((t: any) => {
+        const raw = getRawData(t);
+        const category = categoryMap.get(raw.category_id);
+        
+        return {
+          id: t.id || raw.id,
+          amount: raw.amount,
+          type: raw.type,
+          categoryId: raw.category_id,
+          note: raw.note,
+          date: raw.date,
+          category: category ? {
+            name: category.name,
+            icon: category.icon,
+            color: category.color,
+          } : {
+            name: 'Без категории',
+            icon: 'help-circle',
+            color: colors.text.secondary,
+          },
+        };
+      });
+      
+      // Сортируем по дате (новые сверху)
+      formattedTransactions.sort((a, b) => b.date - a.date);
+      
+      setTransactions(formattedTransactions);
     } catch (error) {
       console.error('Failed to load home data:', error);
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [currentMonth]);
+  }, [currentMonth, colors, isFocused]);
 
   useEffect(() => {
     loadData();
@@ -245,10 +293,10 @@ export const HomeScreen: React.FC<MainTabScreenProps<'Home'>> = ({ navigation })
           <View style={styles.transactionsList}>
             {transactions.map((transaction) => (
               <TransactionItem
-                key={transaction?._raw?.id || transaction?.id}
+                key={transaction.id}
                 transaction={transaction}
-                onPress={handleTransactionPress}
-                onDelete={handleTransactionDelete}
+                onPress={() => handleTransactionPress(transaction)}
+                onDelete={() => handleTransactionDelete(transaction)}
               />
             ))}
           </View>

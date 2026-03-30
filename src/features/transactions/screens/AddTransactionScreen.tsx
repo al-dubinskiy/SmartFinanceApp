@@ -33,14 +33,16 @@ export const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({
   route,
 }) => {
   const { colors } = useTheme();
-  const { user } = useAppSelector((state) => state.auth);
-  
+  const { user } = useAppSelector(state => state.auth);
+
   const [transactionType, setTransactionType] = useState<'income' | 'expense'>(
-    route?.params?.type || 'expense'
+    route?.params?.type || 'expense',
   );
   const [amount, setAmount] = useState<string>('');
   const [note, setNote] = useState<string>('');
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
+    null,
+  );
   const [categories, setCategories] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [date, setDate] = useState<Date>(new Date());
@@ -52,32 +54,31 @@ export const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({
 
   const loadCategories = async () => {
     try {
-      const cats = await categoryService.getCategoriesByType(transactionType);
+      // Используем метод, который возвращает дерево категорий
+      const cats = await categoryService.getCategoriesByTypeWithTree(
+        transactionType,
+      )
       setCategories(cats);
-      
-      if (cats.length > 0 && !selectedCategoryId) {
-        setSelectedCategoryId(cats[0].id);
-      }
     } catch (error) {
-      console.error('Failed to load categories:', error);
+      console.error('Не удалось загрузить категории:', error);
     }
   };
 
   const handleAmountChange = (text: string) => {
     // Разрешаем только цифры и точку
     let cleaned = text.replace(/[^0-9.]/g, '');
-    
+
     // Защита от множественных точек
     const parts = cleaned.split('.');
     if (parts.length > 2) {
       cleaned = parts[0] + '.' + parts.slice(1).join('');
     }
-    
+
     // Ограничиваем 2 знака после запятой
     if (parts.length === 2 && parts[1].length > 2) {
       cleaned = parts[0] + '.' + parts[1].slice(0, 2);
     }
-    
+
     setAmount(cleaned);
   };
 
@@ -89,12 +90,12 @@ export const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({
   const handleDonePress = async () => {
     const numericAmount = getNumericAmount();
     if (numericAmount <= 0) {
-      Alert.alert('Error', 'Please enter a valid amount');
+      Alert.alert('Ошибка', 'Введите корректную сумму');
       return;
     }
 
     if (!selectedCategoryId) {
-      Alert.alert('Error', 'Please select a category');
+      Alert.alert('Ошибка', 'Выберите категорию');
       return;
     }
 
@@ -111,7 +112,7 @@ export const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({
 
       navigation.goBack();
     } catch (error) {
-      Alert.alert('Error', 'Failed to save transaction');
+      Alert.alert('Ошибка', 'Не удалось сохранить транзакцию');
       console.error(error);
     } finally {
       setIsLoading(false);
@@ -138,15 +139,15 @@ export const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({
         >
           <Icon name="close" size={24} color={colors.text.secondary} />
         </TouchableOpacity>
-        
+
         <Text style={[styles.headerTitle, { color: colors.text.primary }]}>
-          Add Transaction
+          Новая транзакция
         </Text>
-        
+
         <View style={styles.placeholder} />
       </View>
 
-      {/* Type Selector */}
+      {/* Выбор типа транзакции */}
       <View style={[styles.typeSelector, { backgroundColor: colors.surface }]}>
         <TouchableOpacity
           style={[
@@ -160,19 +161,24 @@ export const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({
           <Icon
             name="arrow-down"
             size={20}
-            color={transactionType === 'expense' ? colors.error : colors.text.secondary}
+            color={
+              transactionType === 'expense'
+                ? colors.error
+                : colors.text.secondary
+            }
           />
           <Text
             style={[
               styles.typeText,
               {
-                color: transactionType === 'expense'
-                  ? colors.error
-                  : colors.text.secondary,
+                color:
+                  transactionType === 'expense'
+                    ? colors.error
+                    : colors.text.secondary,
               },
             ]}
           >
-            Expense
+            Расход
           </Text>
         </TouchableOpacity>
 
@@ -188,40 +194,47 @@ export const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({
           <Icon
             name="arrow-up"
             size={20}
-            color={transactionType === 'income' ? colors.success : colors.text.secondary}
+            color={
+              transactionType === 'income'
+                ? colors.success
+                : colors.text.secondary
+            }
           />
           <Text
             style={[
               styles.typeText,
               {
-                color: transactionType === 'income'
-                  ? colors.success
-                  : colors.text.secondary,
+                color:
+                  transactionType === 'income'
+                    ? colors.success
+                    : colors.text.secondary,
               },
             ]}
           >
-            Income
+            Доход
           </Text>
         </TouchableOpacity>
       </View>
 
-      <ScrollView 
+      <ScrollView
         style={styles.content}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Amount Input - с нативной клавиатурой */}
-        <View style={[styles.amountContainer, { backgroundColor: colors.surface }]}>
+        {/* Сумма */}
+        <View
+          style={[styles.amountContainer, { backgroundColor: colors.surface }]}
+        >
           <Text style={[styles.amountLabel, { color: colors.text.secondary }]}>
-            Amount
+            Сумма
           </Text>
           <TextInput
             style={[
               styles.amountInput,
-              { 
+              {
                 color: colors.text.primary,
                 fontFamily: 'monospace',
-              }
+              },
             ]}
             placeholder="0.00"
             placeholderTextColor={colors.text.secondary}
@@ -231,17 +244,21 @@ export const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({
             autoFocus
             editable={!isLoading}
           />
-          <Text style={[styles.amountPreview, { color: colors.text.secondary }]}>
+          <Text
+            style={[styles.amountPreview, { color: colors.text.secondary }]}
+          >
             {formatDisplayAmount()}
           </Text>
         </View>
 
-        {/* Note Input */}
-        <View style={[styles.noteContainer, { backgroundColor: colors.surface }]}>
+        {/* Заметка */}
+        <View
+          style={[styles.noteContainer, { backgroundColor: colors.surface }]}
+        >
           <Icon name="pencil" size={20} color={colors.text.secondary} />
           <TextInput
             style={[styles.noteInput, { color: colors.text.primary }]}
-            placeholder="Add a note (optional)"
+            placeholder="Добавить заметку (необязательно)"
             placeholderTextColor={colors.text.secondary}
             value={note}
             onChangeText={setNote}
@@ -249,7 +266,7 @@ export const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({
           />
         </View>
 
-        {/* Category Selector */}
+        {/* Выбор категории */}
         <CategorySelector
           categories={categories}
           selectedCategoryId={selectedCategoryId}
@@ -257,14 +274,14 @@ export const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({
           type={transactionType}
         />
 
-        {/* Date Picker */}
+        {/* Дата */}
         <TouchableOpacity
           style={[styles.dateContainer, { backgroundColor: colors.surface }]}
           onPress={() => setShowDatePicker(true)}
         >
           <Icon name="calendar" size={20} color={colors.text.secondary} />
           <Text style={[styles.dateText, { color: colors.text.primary }]}>
-            {date.toLocaleDateString()}
+            {date.toLocaleDateString('ru-RU')}
           </Text>
           <Icon name="chevron-down" size={20} color={colors.text.secondary} />
         </TouchableOpacity>
@@ -279,17 +296,18 @@ export const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({
                 setDate(selectedDate);
               }
             }}
+            locale="ru-RU" // Добавлено для русского языка
           />
         )}
 
-        {/* Save Button */}
+        {/* Кнопка сохранения */}
         <TouchableOpacity
           style={[styles.saveButton, { backgroundColor: colors.primary }]}
           onPress={handleDonePress}
           disabled={isLoading}
         >
           <Text style={styles.saveButtonText}>
-            {isLoading ? 'Saving...' : 'Save Transaction'}
+            {isLoading ? 'Сохранение...' : 'Сохранить транзакцию'}
           </Text>
         </TouchableOpacity>
       </ScrollView>
