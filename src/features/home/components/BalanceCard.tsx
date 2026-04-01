@@ -10,6 +10,7 @@ interface BalanceCardProps {
   expense: number;
   currency?: string;
   isLoading?: boolean;
+  totalBalance?: number;
 }
 
 export const BalanceCard: React.FC<BalanceCardProps> = ({
@@ -18,6 +19,7 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
   expense,
   currency = 'RUB',
   isLoading = false,
+  totalBalance = 0,
 }) => {
   const { colors } = useTheme();
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
@@ -54,7 +56,7 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
       </View>
 
       <Text style={[styles.balance, { color: colors.text.primary }]}>
-        {formatCurrency(balance, currency)}
+        {formatCurrency(totalBalance, currency)}
       </Text>
 
       <View style={styles.statsContainer}>

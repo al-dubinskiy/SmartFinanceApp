@@ -44,19 +44,53 @@ class TransactionService {
     });
   }
 
+  async getAllTransactions(): Promise<Transaction[]> {
+    const transactions = getTransactionsCollection();
+    return await transactions.query().fetch();
+  }
   async getTransactionById(id: string) {
     const transactions = getTransactionsCollection();
     return await transactions.find(id);
   }
   // Получить транзакции за период
-  async getTransactionsByPeriod(startDate: number, endDate: number) {
+  async getTransactionsByPeriod(
+    startDate: number,
+    endDate: number,
+    type?: 'expense' | 'income',
+  ) {
     const transactions = getTransactionsCollection();
-    return await transactions
-      .query(
-        Q.where('date', Q.between(startDate, endDate)),
-        Q.sortBy('date', Q.desc),
-      )
-      .fetch();
+
+    // Нормализуем даты
+    const normalizedStartDate = new Date(startDate);
+    normalizedStartDate.setHours(0, 0, 0, 0);
+
+    const normalizedEndDate = new Date(endDate);
+    normalizedEndDate.setHours(23, 59, 59, 999);
+
+    let query = transactions.query(
+      Q.where(
+        'date',
+        Q.between(normalizedStartDate.getTime(), normalizedEndDate.getTime()),
+      ),
+      Q.sortBy('date', Q.desc),
+    );
+
+    // Добавляем фильтр по типу, если указан
+    if (type) {
+      query = query.filter(Q.where('type', '==', type));
+    }
+
+    const result = await query.fetch();
+
+    // Дедупликация по id
+    const uniqueById = new Map();
+    result.forEach(t => {
+      if (!uniqueById.has(t.id)) {
+        uniqueById.set(t.id, t);
+      }
+    });
+
+    return Array.from(uniqueById.values());
   }
 
   // Получить транзакции по категории
@@ -159,6 +193,23 @@ class TransactionService {
       }
     });
 
+    return balance;
+  }
+
+  // Добавьте метод для получения общего баланса
+  async getTotalBalance(): Promise<number> {
+    const transactions = getTransactionsCollection();
+    const allTransactions = await transactions.query().fetch();
+
+    let balance = 0;
+    for (const t of allTransactions) {
+      const raw = t._raw || t;
+      if (raw.type === 'income') {
+        balance += raw.amount;
+      } else {
+        balance -= raw.amount;
+      }
+    }
     return balance;
   }
 }

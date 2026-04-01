@@ -1,431 +1,389 @@
 import { database } from './index';
 
-// ============ КАТЕГОРИИ НА РУССКОМ ============
+// ============ КАТЕГОРИИ С ПОДКАТЕГОРИЯМИ ============
 const EXPENSE_CATEGORIES = [
-  {
-    name: 'Еда и рестораны',
-    icon: 'food',
-    color: '#FF6B6B',
-    type: 'expense',
-    order: 1,
-  },
-  {
-    name: 'Продукты',
-    icon: 'cart',
-    color: '#4ECDC4',
-    type: 'expense',
-    order: 2,
-  },
-  {
-    name: 'Транспорт',
-    icon: 'car',
-    color: '#45B7D1',
-    type: 'expense',
-    order: 3,
-  },
-  {
-    name: 'Развлечения',
-    icon: 'movie',
-    color: '#96CEB4',
-    type: 'expense',
-    order: 4,
-  },
-  {
-    name: 'Шопинг',
-    icon: 'shopping',
-    color: '#FFEAA7',
-    type: 'expense',
-    order: 5,
-  },
-  {
-    name: 'Коммунальные услуги',
-    icon: 'flash',
-    color: '#DDA0DD',
-    type: 'expense',
-    order: 6,
-  },
-  {
-    name: 'Медицина',
-    icon: 'hospital',
-    color: '#98D8C8',
-    type: 'expense',
-    order: 7,
-  },
-  {
-    name: 'Образование',
-    icon: 'school',
-    color: '#F7DC6F',
-    type: 'expense',
-    order: 8,
-  },
-  {
-    name: 'Подарки',
-    icon: 'gift',
-    color: '#E67E22',
-    type: 'expense',
-    order: 9,
-  },
-  {
-    name: 'Кафе и кофейни',
-    icon: 'coffee',
-    color: '#A0522D',
-    type: 'expense',
-    order: 10,
-  },
-  {
-    name: 'Связь и интернет',
-    icon: 'wifi',
-    color: '#4682B4',
-    type: 'expense',
-    order: 11,
-  },
-  {
-    name: 'Аренда',
-    icon: 'home',
-    color: '#2F4F4F',
-    type: 'expense',
-    order: 12,
-  },
-  {
-    name: 'Одежда',
-    icon: 'tshirt-crew',
-    color: '#DB7093',
-    type: 'expense',
-    order: 13,
-  },
-  {
-    name: 'Спорт и хобби',
-    icon: 'basketball',
-    color: '#228B22',
-    type: 'expense',
-    order: 14,
-  },
-  {
-    name: 'Путешествия',
-    icon: 'airplane',
-    color: '#1E90FF',
-    type: 'expense',
-    order: 15,
-  },
-  {
-    name: 'Косметика',
-    icon: 'face-woman',
-    color: '#FF69B4',
-    type: 'expense',
-    order: 16,
-  },
-  {
-    name: 'Домашние животные',
-    icon: 'dog',
-    color: '#CD853F',
-    type: 'expense',
-    order: 17,
-  },
-  {
-    name: 'Прочее',
-    icon: 'dots-horizontal',
-    color: '#95A5A6',
-    type: 'expense',
-    order: 18,
-  },
+  { name: 'Еда и рестораны', icon: 'food', color: '#FF6B6B', type: 'expense', order: 1 },
+  { name: 'Продукты', icon: 'cart', color: '#4ECDC4', type: 'expense', order: 2 },
+  { name: 'Транспорт', icon: 'car', color: '#45B7D1', type: 'expense', order: 3 },
+  { name: 'Развлечения', icon: 'movie', color: '#96CEB4', type: 'expense', order: 4 },
+  { name: 'Шопинг', icon: 'shopping', color: '#FFEAA7', type: 'expense', order: 5 },
+  { name: 'Коммунальные услуги', icon: 'flash', color: '#DDA0DD', type: 'expense', order: 6 },
+  { name: 'Медицина', icon: 'hospital', color: '#98D8C8', type: 'expense', order: 7 },
+  { name: 'Образование', icon: 'school', color: '#F7DC6F', type: 'expense', order: 8 },
+  { name: 'Подарки', icon: 'gift', color: '#E67E22', type: 'expense', order: 9 },
+  { name: 'Кафе и кофейни', icon: 'coffee', color: '#A0522D', type: 'expense', order: 10 },
+  { name: 'Связь и интернет', icon: 'wifi', color: '#4682B4', type: 'expense', order: 11 },
+  { name: 'Аренда', icon: 'home', color: '#2F4F4F', type: 'expense', order: 12 },
+  { name: 'Одежда', icon: 'tshirt-crew', color: '#DB7093', type: 'expense', order: 13 },
+  { name: 'Спорт и хобби', icon: 'basketball', color: '#228B22', type: 'expense', order: 14 },
+  { name: 'Путешествия', icon: 'airplane', color: '#1E90FF', type: 'expense', order: 15 },
 ];
 
 const INCOME_CATEGORIES = [
-  {
-    name: 'Зарплата',
-    icon: 'cash',
-    color: '#2ECC71',
-    type: 'income',
-    order: 1,
-  },
-  {
-    name: 'Фриланс',
-    icon: 'laptop',
-    color: '#3498DB',
-    type: 'income',
-    order: 2,
-  },
-  {
-    name: 'Инвестиции',
-    icon: 'trending-up',
-    color: '#9B59B6',
-    type: 'income',
-    order: 3,
-  },
+  { name: 'Зарплата', icon: 'cash', color: '#2ECC71', type: 'income', order: 1 },
+  { name: 'Аванс', icon: 'cash-refund', color: '#3498DB', type: 'income', order: 2 },
+  { name: 'Фриланс', icon: 'laptop', color: '#9B59B6', type: 'income', order: 3 },
   { name: 'Подарки', icon: 'gift', color: '#E67E22', type: 'income', order: 4 },
-  {
-    name: 'Возвраты',
-    icon: 'cash-refund',
-    color: '#E74C3C',
-    type: 'income',
-    order: 5,
-  },
-  {
-    name: 'Премия',
-    icon: 'trophy',
-    color: '#F39C12',
-    type: 'income',
-    order: 6,
-  },
-  {
-    name: 'Прочее',
-    icon: 'dots-horizontal',
-    color: '#95A5A6',
-    type: 'income',
-    order: 7,
-  },
+  { name: 'Возвраты', icon: 'cash-refund', color: '#E74C3C', type: 'income', order: 5 },
+  { name: 'Премия', icon: 'trophy', color: '#F39C12', type: 'income', order: 6 },
+  { name: 'Дивиденды', icon: 'chart-line', color: '#1ABC9C', type: 'income', order: 7 },
+  { name: 'Проценты по вкладу', icon: 'bank', color: '#27AE60', type: 'income', order: 8 },
 ];
 
-// Реалистичные цены для каждой категории расходов
-const getExpenseAmountByCategory = (
-  categoryName: string,
-  note?: string,
-): number => {
-  const prices: Record<string, number[]> = {
-    'Еда и рестораны': [850, 1200, 1500, 2000, 3500],
-    Продукты: [500, 800, 1200, 1800, 2500, 4000],
-    Транспорт: [100, 200, 400, 800, 1500],
-    Развлечения: [300, 500, 1000, 2000, 3000],
-    Шопинг: [1000, 2000, 3500, 5000, 8000],
-    'Коммунальные услуги': [2500, 3500, 4500, 6000],
-    Медицина: [500, 1000, 2000, 5000],
-    Образование: [3000, 5000, 10000, 15000],
-    Подарки: [1000, 2000, 3000, 5000],
-    'Кафе и кофейни': [150, 250, 400, 600, 1000],
-    'Связь и интернет': [450, 650, 850, 1200],
-    Аренда: [15000, 20000, 25000, 35000],
-    Одежда: [1500, 3000, 5000, 8000, 12000],
-    'Спорт и хобби': [1000, 2000, 3500, 5000],
-    Путешествия: [5000, 10000, 15000, 30000],
-    Косметика: [500, 1000, 2000, 3500],
-    'Домашние животные': [500, 1000, 2000],
-    Прочее: [100, 300, 500, 1000],
-  };
+// ПОДКАТЕГОРИИ
+const SUBCATEGORIES = [
+  { name: 'Рестораны', icon: 'silverware-fork-knife', color: '#FF6B6B', parentName: 'Еда и рестораны' },
+  { name: 'Фастфуд', icon: 'hamburger', color: '#FF8C69', parentName: 'Еда и рестораны' },
+  { name: 'Доставка', icon: 'food-takeout-box', color: '#FFA07A', parentName: 'Еда и рестораны' },
+  { name: 'Фрукты и овощи', icon: 'fruit-cherries', color: '#4ECDC4', parentName: 'Продукты' },
+  { name: 'Мясо и рыба', icon: 'food-steak', color: '#5D9B9B', parentName: 'Продукты' },
+  { name: 'Молочные продукты', icon: 'cheese', color: '#6EB5A5', parentName: 'Продукты' },
+  { name: 'Бакалея', icon: 'basket', color: '#7FCDCD', parentName: 'Продукты' },
+  { name: 'Общественный транспорт', icon: 'bus', color: '#45B7D1', parentName: 'Транспорт' },
+  { name: 'Такси', icon: 'taxi', color: '#5AC8FA', parentName: 'Транспорт' },
+  { name: 'Бензин', icon: 'gas-station', color: '#6FD8FF', parentName: 'Транспорт' },
+  { name: 'Парковка', icon: 'parking', color: '#85E4FF', parentName: 'Транспорт' },
+  { name: 'Кино', icon: 'movie', color: '#96CEB4', parentName: 'Развлечения' },
+  { name: 'Концерты', icon: 'music', color: '#A8DBC9', parentName: 'Развлечения' },
+  { name: 'Игры', icon: 'gamepad-variant', color: '#BAE8DE', parentName: 'Развлечения' },
+  { name: 'Хобби', icon: 'palette', color: '#CCF5F3', parentName: 'Развлечения' },
+  { name: 'Одежда', icon: 'tshirt-crew', color: '#FFEAA7', parentName: 'Шопинг' },
+  { name: 'Обувь', icon: 'shoe-print', color: '#FFF0BB', parentName: 'Шопинг' },
+  { name: 'Электроника', icon: 'cellphone', color: '#FFF6CF', parentName: 'Шопинг' },
+];
 
-  const categoryPrices = prices[categoryName] || [500, 1000, 2000];
+// ============ ФУНКЦИИ ДЛЯ ГЕНЕРАЦИИ ДАННЫХ ============
 
-  // Для некоторых заметок используем специфические цены
-  if (note) {
-    if (note.includes('Кофе') || note.includes('Starbucks')) return 350;
-    if (note.includes('Обед')) return 450;
-    if (note.includes('Ужин')) return 1200;
-    if (note.includes('Такси')) return 400;
-    if (note.includes('Кино')) return 600;
-    if (note.includes('Аптека')) return 850;
-    if (note.includes('Бензин')) return 2000;
-  }
-
-  return categoryPrices[Math.floor(Math.random() * categoryPrices.length)];
+const getDateForMonth = (year: number, month: number, day: number): number => {
+  return new Date(year, month, day).getTime();
 };
 
-// Реалистичные суммы доходов
-const getIncomeAmountByCategory = (categoryName: string): number => {
-  const incomes: Record<string, number[]> = {
-    Зарплата: [80000, 100000, 120000, 150000],
-    Фриланс: [10000, 20000, 35000, 50000],
-    Инвестиции: [3000, 5000, 10000, 20000],
-    Подарки: [3000, 5000, 10000],
-    Возвраты: [1000, 2000, 5000],
-    Премия: [20000, 35000, 50000],
-    Прочее: [1000, 3000, 5000],
-  };
-
-  const categoryIncomes = incomes[categoryName] || [5000, 10000, 20000];
-  return categoryIncomes[Math.floor(Math.random() * categoryIncomes.length)];
+// Регулярные дополнительные доходы (ежемесячные)
+const getRegularExtraIncome = (month: number, year: number): any[] => {
+  const regularIncomes = [];
+  
+  // Фриланс - регулярный доход, но с переменной суммой
+  const freelanceAmount = 15000 + Math.random() * 10000;
+  regularIncomes.push({
+    amount: Math.round(freelanceAmount),
+    category: 'Фриланс',
+    note: 'Регулярный проект',
+    day: 15,
+    isRecurring: true,
+  });
+  
+  // Проценты по вкладу (ежемесячно)
+  regularIncomes.push({
+    amount: 3500,
+    category: 'Проценты по вкладу',
+    note: 'Ежемесячная капитализация',
+    day: 28,
+    isRecurring: true,
+  });
+  
+  return regularIncomes;
 };
 
-// Функция для получения случайной даты за последние 3 месяца
-const getRandomDate = (): number => {
-  const now = new Date();
-  const threeMonthsAgo = new Date();
-  threeMonthsAgo.setMonth(now.getMonth() - 3);
-  return new Date(
-    threeMonthsAgo.getTime() +
-      Math.random() * (now.getTime() - threeMonthsAgo.getTime()),
-  ).getTime();
-};
-
-// Описания расходов по категориям
-const expenseNotesByCategory: Record<string, string[]> = {
-  'Еда и рестораны': [
-    'Обед в ресторане',
-    'Ужин в ресторане',
-    'Бизнес-ланч',
-    'Суши',
-    'Пицца',
-  ],
-  Продукты: [
-    'Закупка продуктов',
-    'Овощи и фрукты',
-    'Мясные продукты',
-    'Молочные продукты',
-  ],
-  Транспорт: ['Поездка на такси', 'Метро', 'Бензин', 'Парковка', 'Штраф'],
-  Развлечения: ['Кино с друзьями', 'Боулинг', 'Квест', 'Концерт', 'Театр'],
-  Шопинг: ['Покупка одежды', 'Обувь', 'Аксессуары', 'Техника'],
-  'Коммунальные услуги': ['Электричество', 'Вода', 'Отопление', 'Вывоз мусора'],
-  Медицина: ['Аптека', 'Прием врача', 'Анализы', 'Стоматология'],
-  Образование: ['Курсы', 'Учебники', 'Тренинг', 'Вебинар'],
-  Подарки: ['Подарок на день рождения', 'Новогодний подарок', 'Сюрприз'],
-  'Кафе и кофейни': ['Кофе с собой', 'Десерт', 'Завтрак в кафе', 'Чай'],
-  'Связь и интернет': [
-    'Мобильная связь',
-    'Домашний интернет',
-    'Подписка Netflix',
-  ],
-  Аренда: ['Аренда квартиры', 'Аренда комнаты', 'Коммуналка'],
-  Одежда: ['Джинсы', 'Куртка', 'Свитер', 'Платье', 'Рубашка'],
-  'Спорт и хобби': ['Абонемент в спортзал', 'Экипировка', 'Тренировка'],
-  Путешествия: ['Авиабилеты', 'Отель', 'Экскурсии', 'Трансфер'],
-  Косметика: ['Крем', 'Парфюм', 'Макияж', 'Уход'],
-  'Домашние животные': ['Корм', 'Наполнитель', 'Игрушки', 'Ветеринар'],
-  Прочее: ['Прочие расходы', 'Мелочи', 'Непредвиденное'],
-};
-
-// Генерация тестовых транзакций с реалистичными ценами
-const generateTestTransactions = (categories: any[]) => {
-  const transactions = [];
-  const expenseCategories = categories.filter(c => c.type === 'expense');
-  const incomeCategories = categories.filter(c => c.type === 'income');
-
-  // Расходы по каждой категории (по 3-5 транзакций на категорию)
-  for (const category of expenseCategories) {
-    const notes = expenseNotesByCategory[category.name] || ['Расход'];
-    const transactionCount = Math.floor(Math.random() * 5) + 3; // 3-7 транзакций на категорию
-
-    for (let i = 0; i < transactionCount; i++) {
-      const note = notes[Math.floor(Math.random() * notes.length)];
-      const amount = getExpenseAmountByCategory(category.name, note);
-
-      transactions.push({
-        amount,
-        type: 'expense',
-        categoryId: category.id,
-        note,
-        date: getRandomDate(),
+// Нерегулярные дополнительные доходы (разовые)
+const getIrregularExtraIncome = (month: number, year: number): any[] => {
+  const irregularIncomes = [];
+  const randomChance = Math.random();
+  
+  // 80% вероятность хотя бы одного нерегулярного дохода в месяце
+  if (randomChance < 0.8) {
+    const irregularTypes = [
+      { category: 'Подарки', minAmount: 3000, maxAmount: 15000, note: 'Подарок на день рождения' },
+      { category: 'Возвраты', minAmount: 2000, maxAmount: 12000, note: 'Возврат долга' },
+      { category: 'Премия', minAmount: 25000, maxAmount: 60000, note: 'Квартальная премия' },
+      { category: 'Дивиденды', minAmount: 5000, maxAmount: 25000, note: 'Дивиденды по акциям' },
+      { category: 'Продажа вещей', minAmount: 2000, maxAmount: 15000, note: 'Продажа на Avito' },
+    ];
+    
+    // 1-2 нерегулярных дохода в месяц
+    const incomesCount = Math.random() < 0.5 ? 1 : 2;
+    
+    for (let i = 0; i < incomesCount; i++) {
+      const selected = irregularTypes[Math.floor(Math.random() * irregularTypes.length)];
+      const amount = selected.minAmount + Math.random() * (selected.maxAmount - selected.minAmount);
+      const randomDay = Math.floor(Math.random() * 28) + 1;
+      
+      irregularIncomes.push({
+        amount: Math.round(amount),
+        category: selected.category,
+        note: selected.note,
+        day: randomDay,
         isRecurring: false,
-        recurringType: null,
-        location: null,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
       });
     }
   }
+  
+  return irregularIncomes;
+};
 
-  // Доходы (регулярные и дополнительные)
-  for (const category of incomeCategories) {
-    const transactionCount =
-      category.name === 'Зарплата'
-        ? 3
-        : category.name === 'Фриланс'
-        ? 4
-        : category.name === 'Инвестиции'
-        ? 3
-        : 2;
-
-    for (let i = 0; i < transactionCount; i++) {
-      const amount = getIncomeAmountByCategory(category.name);
-      let note = '';
-
-      if (category.name === 'Зарплата') note = 'Зарплата за месяц';
-      else if (category.name === 'Фриланс') note = `Проект #${i + 1}`;
-      else if (category.name === 'Инвестиции') note = 'Дивиденды';
-      else if (category.name === 'Премия') note = 'Годовая премия';
-      else if (category.name === 'Подарки') note = 'Подарок';
-      else if (category.name === 'Возвраты') note = 'Возврат долга';
-
-      transactions.push({
-        amount,
-        type: 'income',
-        categoryId: category.id,
-        note,
-        date: getRandomDate(),
-        isRecurring: category.name === 'Зарплата',
-        recurringType: category.name === 'Зарплата' ? 'monthly' : null,
-        location: null,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      });
-    }
-  }
-
-  // Добавляем регулярные платежи с реалистичными суммами
-  const recurringPayments = [
-    { name: 'Аренда квартиры', amount: 25000, categoryName: 'Аренда', day: 1 },
-    {
-      name: 'Интернет',
-      amount: 850,
-      categoryName: 'Связь и интернет',
-      day: 10,
-    },
-    {
-      name: 'Мобильная связь',
-      amount: 450,
-      categoryName: 'Связь и интернет',
-      day: 15,
-    },
-    { name: 'Спортзал', amount: 2500, categoryName: 'Спорт и хобби', day: 8 },
-    { name: 'Netflix', amount: 499, categoryName: 'Развлечения', day: 5 },
-    {
-      name: 'Электричество',
-      amount: 1200,
-      categoryName: 'Коммунальные услуги',
+// Сезонные доходы (раз в квартал/год)
+const getSeasonalIncome = (month: number, year: number): any[] => {
+  const seasonalIncomes = [];
+  
+  // Премия в декабре
+  if (month === 11) { // декабрь (месяц 11)
+    seasonalIncomes.push({
+      amount: 80000,
+      category: 'Премия',
+      note: 'Годовая премия',
       day: 20,
-    },
-    { name: 'Вода', amount: 800, categoryName: 'Коммунальные услуги', day: 20 },
-  ];
+      isRecurring: false,
+    });
+  }
+  
+  // Дивиденды в марте и сентябре
+  if (month === 2 || month === 8) { // март или сентябрь
+    seasonalIncomes.push({
+      amount: 25000,
+      category: 'Дивиденды',
+      note: 'Квартальные дивиденды',
+      day: 15,
+      isRecurring: true,
+    });
+  }
+  
+  // Налоговый вычет в апреле
+  if (month === 3) { // апрель
+    seasonalIncomes.push({
+      amount: 15000,
+      category: 'Возвраты',
+      note: 'Налоговый вычет',
+      day: 10,
+      isRecurring: false,
+    });
+  }
+  
+  return seasonalIncomes;
+};
 
+// Генерация транзакций по месяцам
+const generateTransactionsByMonth = (categories: any[]) => {
+  const transactions = [];
   const now = new Date();
-  const threeMonthsAgo = new Date();
-  threeMonthsAgo.setMonth(now.getMonth() - 3);
-
-  for (const payment of recurringPayments) {
-    const category = categories.find(c => c.name === payment.categoryName);
-    if (category) {
-      for (let m = 0; m < 3; m++) {
-        const date = new Date(threeMonthsAgo);
-        date.setMonth(threeMonthsAgo.getMonth() + m);
-        date.setDate(payment.day);
-
-        if (date <= now) {
-          transactions.push({
-            amount: payment.amount,
-            type: 'expense',
-            categoryId: category.id,
-            note: payment.name,
-            date: date.getTime(),
-            isRecurring: true,
-            recurringType: 'monthly',
-            location: null,
-            createdAt: date.getTime(),
-            updatedAt: date.getTime(),
-          });
-        }
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth();
+  const currentDay = now.getDate();
+  
+  // Функция для получения ID категории по имени
+  const getCategoryId = (name: string) => {
+    const cat = categories.find(c => c.name === name);
+    return cat?.id;
+  };
+  
+  // Массив месяцев для генерации (текущий и 3 прошлых)
+  const months = [];
+  for (let i = 0; i < 4; i++) {
+    const month = currentMonth - i;
+    const year = month < 0 ? currentYear - 1 : currentYear;
+    const actualMonth = month < 0 ? month + 12 : month;
+    months.push({ year, month: actualMonth, offset: i });
+  }
+  
+  // Генерация для каждого месяца
+  for (const { year, month: monthIndex, offset } of months) {
+    const isCurrentMonth = offset === 0;
+    
+    // ===== РЕГУЛЯРНЫЕ ДОХОДЫ (каждый месяц) =====
+    
+    // 1. Аванс (10 число)
+    const advanceDate = 10;
+    if (!isCurrentMonth || (isCurrentMonth && currentDay >= advanceDate)) {
+      transactions.push({
+        amount: 80000,
+        type: 'income',
+        categoryId: getCategoryId('Аванс'),
+        note: 'Аванс за месяц',
+        date: getDateForMonth(year, monthIndex, advanceDate),
+        isRecurring: true,
+        recurringType: 'monthly',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+    }
+    
+    // 2. Зарплата (25 число)
+    const salaryDate = 25;
+    if (!isCurrentMonth || (isCurrentMonth && currentDay >= salaryDate)) {
+      transactions.push({
+        amount: 120000,
+        type: 'income',
+        categoryId: getCategoryId('Зарплата'),
+        note: 'Зарплата за месяц',
+        date: getDateForMonth(year, monthIndex, salaryDate),
+        isRecurring: true,
+        recurringType: 'monthly',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+    }
+    
+    // 3. Регулярные дополнительные доходы (фриланс, проценты)
+    const regularExtra = getRegularExtraIncome(monthIndex, year);
+    for (const extra of regularExtra) {
+      if (!isCurrentMonth || (isCurrentMonth && currentDay >= extra.day)) {
+        transactions.push({
+          amount: extra.amount,
+          type: 'income',
+          categoryId: getCategoryId(extra.category),
+          note: extra.note,
+          date: getDateForMonth(year, monthIndex, extra.day),
+          isRecurring: extra.isRecurring,
+          recurringType: extra.isRecurring ? 'monthly' : null,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        });
+      }
+    }
+    
+    // ===== НЕРЕГУЛЯРНЫЕ ДОХОДЫ =====
+    
+    // 4. Нерегулярные дополнительные доходы
+    const irregularExtra = getIrregularExtraIncome(monthIndex, year);
+    for (const extra of irregularExtra) {
+      if (!isCurrentMonth || (isCurrentMonth && currentDay >= extra.day)) {
+        transactions.push({
+          amount: extra.amount,
+          type: 'income',
+          categoryId: getCategoryId(extra.category),
+          note: extra.note,
+          date: getDateForMonth(year, monthIndex, extra.day),
+          isRecurring: false,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        });
+      }
+    }
+    
+    // 5. Сезонные доходы
+    const seasonalIncome = getSeasonalIncome(monthIndex, year);
+    for (const extra of seasonalIncome) {
+      if (!isCurrentMonth || (isCurrentMonth && currentDay >= extra.day)) {
+        transactions.push({
+          amount: extra.amount,
+          type: 'income',
+          categoryId: getCategoryId(extra.category),
+          note: extra.note,
+          date: getDateForMonth(year, monthIndex, extra.day),
+          isRecurring: extra.isRecurring,
+          recurringType: extra.isRecurring ? 'yearly' : null,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        });
+      }
+    }
+    
+    // ===== РАСХОДЫ =====
+    
+    // Регулярные платежи
+    const recurringExpenses = [
+      { amount: 45000, category: 'Аренда', day: 1, note: 'Аренда квартиры' },
+      { amount: 1500, category: 'Связь и интернет', day: 5, note: 'Мобильная связь' },
+      { amount: 2000, category: 'Связь и интернет', day: 10, note: 'Интернет' },
+      { amount: 3500, category: 'Коммунальные услуги', day: 15, note: 'Электричество' },
+      { amount: 1500, category: 'Коммунальные услуги', day: 15, note: 'Вода' },
+      { amount: 5000, category: 'Спорт и хобби', day: 20, note: 'Спортзал' },
+      { amount: 799, category: 'Развлечения', day: 25, note: 'Netflix' },
+      { amount: 299, category: 'Развлечения', day: 25, note: 'Spotify' },
+    ];
+    
+    for (const exp of recurringExpenses) {
+      if (!isCurrentMonth || (isCurrentMonth && currentDay >= exp.day)) {
+        transactions.push({
+          amount: exp.amount,
+          type: 'expense',
+          categoryId: getCategoryId(exp.category),
+          note: exp.note,
+          date: getDateForMonth(year, monthIndex, exp.day),
+          isRecurring: true,
+          recurringType: 'monthly',
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        });
+      }
+    }
+    
+    // Повседневные расходы
+    const dailyExpenses = [
+      { category: 'Продукты', amount: 1500 + Math.random() * 2000, day: 3, note: 'Закупка продуктов' },
+      { category: 'Продукты', amount: 1200 + Math.random() * 1500, day: 8, note: 'Продукты на неделю' },
+      { category: 'Продукты', amount: 2000 + Math.random() * 2500, day: 18, note: 'Продукты' },
+      { category: 'Продукты', amount: 1800 + Math.random() * 2000, day: 22, note: 'Продукты' },
+      { category: 'Кафе и кофейни', amount: 350 + Math.random() * 400, day: 2, note: 'Кофе' },
+      { category: 'Кафе и кофейни', amount: 450 + Math.random() * 500, day: 7, note: 'Обед' },
+      { category: 'Кафе и кофейни', amount: 800 + Math.random() * 700, day: 14, note: 'Ужин в кафе' },
+      { category: 'Кафе и кофейни', amount: 400 + Math.random() * 500, day: 21, note: 'Кофе с друзьями' },
+      { category: 'Кафе и кофейни', amount: 600 + Math.random() * 600, day: 28, note: 'Завтрак' },
+      { category: 'Транспорт', amount: 100 + Math.random() * 200, day: 4, note: 'Метро' },
+      { category: 'Транспорт', amount: 500 + Math.random() * 400, day: 9, note: 'Такси' },
+      { category: 'Транспорт', amount: 200 + Math.random() * 300, day: 16, note: 'Проездной' },
+      { category: 'Транспорт', amount: 800 + Math.random() * 500, day: 23, note: 'Такси' },
+    ];
+    
+    for (const exp of dailyExpenses) {
+      if (!isCurrentMonth || (isCurrentMonth && currentDay >= exp.day)) {
+        transactions.push({
+          amount: Math.round(exp.amount),
+          type: 'expense',
+          categoryId: getCategoryId(exp.category),
+          note: exp.note,
+          date: getDateForMonth(year, monthIndex, exp.day),
+          isRecurring: false,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        });
+      }
+    }
+    
+    // Крупные покупки (раз в 1-2 месяца)
+    if (offset === 0 || offset === 2) {
+      const bigPurchases = [
+        { category: 'Одежда', amount: 5000 + Math.random() * 10000, day: 12, note: 'Покупка одежды' },
+        { category: 'Шопинг', amount: 8000 + Math.random() * 12000, day: 19, note: 'Шопинг' },
+        { category: 'Развлечения', amount: 3000 + Math.random() * 7000, day: 24, note: 'Концерт' },
+        { category: 'Путешествия', amount: 15000 + Math.random() * 25000, day: 27, note: 'Бронирование отеля' },
+      ];
+      
+      const purchase = bigPurchases[Math.floor(Math.random() * bigPurchases.length)];
+      if (!isCurrentMonth || (isCurrentMonth && currentDay >= purchase.day)) {
+        transactions.push({
+          amount: Math.round(purchase.amount),
+          type: 'expense',
+          categoryId: getCategoryId(purchase.category),
+          note: purchase.note,
+          date: getDateForMonth(year, monthIndex, purchase.day),
+          isRecurring: false,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        });
       }
     }
   }
-
+  
   return transactions.sort((a, b) => b.date - a.date);
 };
 
-// Генерация бюджетов
-const generateTestBudgets = (categories: any[]) => {
+// Бюджеты для демонстрации
+const generateBudgets = (categories: any[]) => {
   const budgets = [];
   const now = new Date();
   const month = now.getMonth();
   const year = now.getFullYear();
-
+  
   const budgetItems = [
-    { name: 'Еда и рестораны', amount: 15000 },
-    { name: 'Продукты', amount: 12000 },
-    { name: 'Транспорт', amount: 5000 },
-    { name: 'Развлечения', amount: 8000 },
-    { name: 'Шопинг', amount: 10000 },
-    { name: 'Коммунальные услуги', amount: 7000 },
-    { name: 'Кафе и кофейни', amount: 3000 },
-    { name: 'Спорт и хобби', amount: 4000 },
+    { name: 'Еда и рестораны', amount: 30000 },
+    { name: 'Продукты', amount: 25000 },
+    { name: 'Транспорт', amount: 10000 },
+    { name: 'Развлечения', amount: 20000 },
+    { name: 'Шопинг', amount: 30000 },
+    { name: 'Коммунальные услуги', amount: 15000 },
+    { name: 'Аренда', amount: 45000 },
+    { name: 'Кафе и кофейни', amount: 10000 },
   ];
-
+  
   for (const item of budgetItems) {
     const category = categories.find(c => c.name === item.name);
     if (category) {
@@ -441,37 +399,35 @@ const generateTestBudgets = (categories: any[]) => {
       });
     }
   }
-
+  
   return budgets;
 };
 
-// Генерация целей с реалистичными суммами
-const generateTestGoals = () => {
+// Финансовые цели
+const generateGoals = () => {
   const now = new Date();
   const nextYear = new Date();
   nextYear.setFullYear(now.getFullYear() + 1);
   const sixMonths = new Date();
   sixMonths.setMonth(now.getMonth() + 6);
-  const threeMonths = new Date();
-  threeMonths.setMonth(now.getMonth() + 3);
-
+  
   return [
     {
-      name: '🏖️ Путешествие на Бали',
-      targetAmount: 150000,
-      currentAmount: 45000,
+      name: '✈️ Путешествие в Японию',
+      targetAmount: 300000,
+      currentAmount: 120000,
       deadline: sixMonths.getTime(),
-      icon: 'beach',
+      icon: 'airplane',
       color: '#1E90FF',
       isCompleted: false,
       createdAt: Date.now(),
       updatedAt: Date.now(),
     },
     {
-      name: '💻 MacBook Pro',
-      targetAmount: 150000,
-      currentAmount: 89000,
-      deadline: threeMonths.getTime(),
+      name: '💻 Новый MacBook Pro',
+      targetAmount: 200000,
+      currentAmount: 80000,
+      deadline: new Date(now.getFullYear(), now.getMonth() + 3, 1).getTime(),
       icon: 'laptop',
       color: '#9B59B6',
       isCompleted: false,
@@ -480,41 +436,19 @@ const generateTestGoals = () => {
     },
     {
       name: '🏠 Финансовая подушка',
-      targetAmount: 300000,
-      currentAmount: 125000,
-      deadline: null,
+      targetAmount: 500000,
+      currentAmount: 150000,
+      deadline: nextYear.getTime(),
       icon: 'shield-home',
       color: '#2ECC71',
       isCompleted: false,
       createdAt: Date.now(),
       updatedAt: Date.now(),
     },
-    {
-      name: '🚗 Новая машина',
-      targetAmount: 1000000,
-      currentAmount: 250000,
-      deadline: nextYear.getTime(),
-      icon: 'car',
-      color: '#E74C3C',
-      isCompleted: false,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    },
-    {
-      name: '🎓 Курс по React Native',
-      targetAmount: 25000,
-      currentAmount: 25000,
-      deadline: new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime(),
-      icon: 'school',
-      color: '#F39C12',
-      isCompleted: true,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    },
   ];
 };
 
-// ОСНОВНАЯ ФУНКЦИЯ ЗАПОЛНЕНИЯ
+// ============ ОСНОВНАЯ ФУНКЦИЯ ЗАПОЛНЕНИЯ ============
 export async function seedTestData() {
   console.log('🌱 Начало заполнения тестовыми данными...');
   
@@ -524,7 +458,6 @@ export async function seedTestData() {
     
     if (existingCount > 0) {
       console.log('🗑️ Очистка существующих данных...');
-      
       await database.write(async () => {
         const transactions = await database.get('transactions').query().fetch();
         for (const t of transactions) await t.destroyPermanently();
@@ -538,16 +471,14 @@ export async function seedTestData() {
         const allCategories = await categoriesCollection.query().fetch();
         for (const c of allCategories) await c.destroyPermanently();
       });
-      
       console.log('✅ Существующие данные очищены');
     }
     
-    // Создаем корневые категории и сразу сохраняем их ID
-    console.log('📁 Создание корневых категорий...');
+    // Создаем категории
+    console.log('📁 Создание категорий...');
     const categoryIds: Record<string, string> = {};
     
     await database.write(async () => {
-      // Создаем категории расходов и сохраняем их ID
       for (const cat of EXPENSE_CATEGORIES) {
         const newCat = await categoriesCollection.create((record: any) => {
           record.name = cat.name;
@@ -556,14 +487,13 @@ export async function seedTestData() {
           record.color = cat.color;
           record.order = cat.order;
           record.isActive = true;
-          record.parentId = ''; // Пустая строка для корневых категорий
+          record.parentId = '';
           record.createdAt = Date.now();
           record.updatedAt = Date.now();
         });
         categoryIds[cat.name] = newCat.id;
       }
       
-      // Создаем категории доходов и сохраняем их ID
       for (const cat of INCOME_CATEGORIES) {
         const newCat = await categoriesCollection.create((record: any) => {
           record.name = cat.name;
@@ -580,64 +510,15 @@ export async function seedTestData() {
       }
     });
     
-    console.log(`✅ Создано ${Object.keys(categoryIds).length} корневых категорий`);
+    console.log(`✅ Создано ${Object.keys(categoryIds).length} категорий`);
     
-    // Создаем подкатегории, используя ID из categoryIds
+    // Создаем подкатегории
     console.log('📁 Создание подкатегорий...');
-    
-    // Подкатегории с указанием родительской категории по имени (для удобства чтения)
-    // Внутри мы используем сохраненные ID
-    const subcategories = [
-      // Подкатегории для "Еда и рестораны"
-      { name: 'Рестораны', icon: 'silverware-fork-knife', color: '#FF6B6B', parentName: 'Еда и рестораны' },
-      { name: 'Фастфуд', icon: 'hamburger', color: '#FF8C69', parentName: 'Еда и рестораны' },
-      { name: 'Доставка', icon: 'food-takeout-box', color: '#FFA07A', parentName: 'Еда и рестораны' },
-      
-      // Подкатегории для "Продукты"
-      { name: 'Фрукты и овощи', icon: 'fruit-cherries', color: '#4ECDC4', parentName: 'Продукты' },
-      { name: 'Мясо и рыба', icon: 'food-steak', color: '#5D9B9B', parentName: 'Продукты' },
-      { name: 'Молочные продукты', icon: 'cheese', color: '#6EB5A5', parentName: 'Продукты' },
-      { name: 'Бакалея', icon: 'basket', color: '#7FCDCD', parentName: 'Продукты' },
-      
-      // Подкатегории для "Транспорт"
-      { name: 'Общественный транспорт', icon: 'bus', color: '#45B7D1', parentName: 'Транспорт' },
-      { name: 'Такси', icon: 'taxi', color: '#5AC8FA', parentName: 'Транспорт' },
-      { name: 'Бензин', icon: 'gas-station', color: '#6FD8FF', parentName: 'Транспорт' },
-      { name: 'Парковка', icon: 'parking', color: '#85E4FF', parentName: 'Транспорт' },
-      
-      // Подкатегории для "Развлечения"
-      { name: 'Кино', icon: 'movie', color: '#96CEB4', parentName: 'Развлечения' },
-      { name: 'Концерты', icon: 'music', color: '#A8DBC9', parentName: 'Развлечения' },
-      { name: 'Игры', icon: 'gamepad-variant', color: '#BAE8DE', parentName: 'Развлечения' },
-      
-      // Подкатегории для "Шопинг"
-      { name: 'Одежда', icon: 'tshirt-crew', color: '#FFEAA7', parentName: 'Шопинг' },
-      { name: 'Обувь', icon: 'shoe-print', color: '#FFF0BB', parentName: 'Шопинг' },
-      { name: 'Электроника', icon: 'cellphone', color: '#FFF6CF', parentName: 'Шопинг' },
-      
-      // Подкатегории для "Спорт и хобби"
-      { name: 'Фитнес', icon: 'dumbbell', color: '#228B22', parentName: 'Спорт и хобби' },
-      { name: 'Тренировки', icon: 'run', color: '#32CD32', parentName: 'Спорт и хобби' },
-      { name: 'Экипировка', icon: 'shoe-sneaker', color: '#42DC42', parentName: 'Спорт и хобби' },
-      
-      // Подкатегории для "Кафе и кофейни"
-      { name: 'Кофе с собой', icon: 'coffee-to-go', color: '#A0522D', parentName: 'Кафе и кофейни' },
-      { name: 'Десерты', icon: 'cake', color: '#B86F3A', parentName: 'Кафе и кофейни' },
-      { name: 'Завтраки', icon: 'breakfast', color: '#D08C5C', parentName: 'Кафе и кофейни' },
-      
-      // Подкатегории для "Путешествия"
-      { name: 'Авиабилеты', icon: 'airplane-takeoff', color: '#1E90FF', parentName: 'Путешествия' },
-      { name: 'Отели', icon: 'hotel', color: '#3AA8FF', parentName: 'Путешествия' },
-      { name: 'Экскурсии', icon: 'camera', color: '#56B6FF', parentName: 'Путешествия' },
-    ];
-    
     let subcategoryCount = 0;
     
     await database.write(async () => {
-      for (const sub of subcategories) {
-        // Получаем ID родительской категории по имени
+      for (const sub of SUBCATEGORIES) {
         const parentId = categoryIds[sub.parentName];
-        
         if (parentId) {
           await categoriesCollection.create((record: any) => {
             record.name = sub.name;
@@ -646,27 +527,23 @@ export async function seedTestData() {
             record.color = sub.color;
             record.order = 999;
             record.isActive = true;
-            record.parentId = parentId; // Здесь используем реальный ID родителя
+            record.parentId = parentId;
             record.createdAt = Date.now();
             record.updatedAt = Date.now();
           });
           subcategoryCount++;
-        } else {
-          console.warn(`⚠️ Родительская категория не найдена: ${sub.parentName}`);
         }
       }
     });
     
     console.log(`✅ Создано ${subcategoryCount} подкатегорий`);
     
-    // ... продолжение создания транзакций, бюджетов, целей ...
+    // Получаем все категории для создания транзакций
+    const allCategories = await categoriesCollection.query().fetch();
     
     // Создаем транзакции
     console.log('💰 Генерация транзакций...');
-    
-    // Собираем все категории (включая подкатегории) для генерации транзакций
-    const allCategories = await categoriesCollection.query().fetch();
-    const transactions = generateTestTransactions(allCategories);
+    const transactions = generateTransactionsByMonth(allCategories);
     
     await database.write(async () => {
       const transactionsCollection = database.get('transactions');
@@ -677,9 +554,9 @@ export async function seedTestData() {
           record.categoryId = t.categoryId;
           record.note = t.note;
           record.date = t.date;
-          record.isRecurring = t.isRecurring;
-          record.recurringType = t.recurringType;
-          record.location = t.location;
+          record.isRecurring = t.isRecurring || false;
+          record.recurringType = t.recurringType || null;
+          record.location = null;
           record.createdAt = t.createdAt;
           record.updatedAt = t.updatedAt;
         });
@@ -688,10 +565,9 @@ export async function seedTestData() {
     
     console.log(`✅ Создано ${transactions.length} транзакций`);
     
-    // Создаем бюджеты (только для корневых категорий)
+    // Создаем бюджеты
     console.log('📊 Создание бюджетов...');
-    const rootCategories = allCategories.filter(c => !c.parentId || c.parentId === '');
-    const budgets = generateTestBudgets(rootCategories);
+    const budgets = generateBudgets(allCategories);
     
     await database.write(async () => {
       const budgetsCollection = database.get('budgets');
@@ -713,7 +589,7 @@ export async function seedTestData() {
     
     // Создаем цели
     console.log('🎯 Создание целей...');
-    const goals = generateTestGoals();
+    const goals = generateGoals();
     
     await database.write(async () => {
       const goalsCollection = database.get('goals');
@@ -737,19 +613,33 @@ export async function seedTestData() {
     // Статистика
     const totalIncome = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
     const totalExpense = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+    const currentBalance = totalIncome - totalExpense;
     
     console.log('\n🎉 ЗАПОЛНЕНИЕ ЗАВЕРШЕНО!');
     console.log('====================================================');
-    console.log(`📁 Категории: ${allCategories.length}`);
-    console.log(`   ├─ Корневых: ${rootCategories.length}`);
-    console.log(`   └─ Подкатегорий: ${allCategories.length - rootCategories.length}`);
+    console.log(`📁 Всего категорий: ${allCategories.length}`);
+    console.log(`   ├─ Корневых: ${Object.keys(categoryIds).length}`);
+    console.log(`   └─ Подкатегорий: ${subcategoryCount}`);
     console.log(`💰 Транзакции: ${transactions.length}`);
     console.log(`   ├─ Доходы: ${totalIncome.toLocaleString()} ₽`);
     console.log(`   └─ Расходы: ${totalExpense.toLocaleString()} ₽`);
-    console.log(`   └─ Баланс: ${(totalIncome - totalExpense).toLocaleString()} ₽`);
+    console.log(`   └─ ТЕКУЩИЙ БАЛАНС: ${currentBalance.toLocaleString()} ₽`);
     console.log(`📊 Бюджеты: ${budgets.length}`);
     console.log(`🎯 Цели: ${goals.length}`);
     console.log('====================================================');
+    console.log('\n📊 СТРУКТУРА ДОХОДОВ:');
+    console.log('   📅 Аванс (10 число): 80 000 ₽');
+    console.log('   📅 Зарплата (25 число): 120 000 ₽');
+    console.log('   💻 Фриланс: 15 000-25 000 ₽ (регулярно)');
+    console.log('   📈 Проценты по вкладу: 3 500 ₽ (регулярно)');
+    console.log('   🎲 Нерегулярные доходы: подарки, возвраты, премии, дивиденды');
+    console.log('   🎄 Сезонные доходы: годовая премия (декабрь), налоговый вычет (апрель)');
+    console.log('\n📱 ДЕМОНСТРАЦИОННЫЕ СЦЕНАРИИ:');
+    console.log('   1. Категории с подкатегориями - в модалке выбора категории');
+    console.log('   2. Бюджеты с прогрессом - на экране планирования');
+    console.log('   3. Финансовые цели - там же');
+    console.log('   4. Прогноз кассовых разрывов - в аналитике');
+    console.log('   5. Ежедневные лимиты - на главном экране');
     
   } catch (error) {
     console.error('❌ Ошибка:', error);

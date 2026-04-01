@@ -18,6 +18,7 @@ import { BalanceCard } from '../components/BalanceCard';
 import { TransactionItem } from '../components/TransactionItem';
 import { formatMonthYear } from '../../../core/utils/formatters';
 import { useIsFocused } from '@react-navigation/native';
+import { getBudgetsCollection, getGoalsCollection, getTransactionsCollection } from '../../../database';
 
 interface Stats {
   totalIncome: number;
@@ -25,11 +26,13 @@ interface Stats {
   balance: number;
 }
 
-export const HomeScreen: React.FC<MainTabScreenProps<'Home'>> = ({ navigation }) => {
+export const HomeScreen: React.FC<MainTabScreenProps<'Home'>> = ({
+  navigation,
+}) => {
   const { colors } = useTheme();
   const isFocused = useIsFocused();
-  const { user } = useAppSelector((state) => state.auth);
-  
+  const { user } = useAppSelector(state => state.auth);
+
   const [transactions, setTransactions] = useState<any[]>([]);
   const [stats, setStats] = useState<Stats>({
     totalIncome: 0,
@@ -39,6 +42,7 @@ export const HomeScreen: React.FC<MainTabScreenProps<'Home'>> = ({ navigation })
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [totalBalance, setTotalBalance] = useState(0);
 
   // Функция для получения данных из _raw или напрямую
   const getRawData = (item: any) => {
@@ -48,23 +52,45 @@ export const HomeScreen: React.FC<MainTabScreenProps<'Home'>> = ({ navigation })
   const loadData = useCallback(async () => {
     try {
       const now = currentMonth;
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).getTime();
+      const startOfMonth = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        1,
+      ).getTime();
+      const endOfMonth = new Date(
+        now.getFullYear(),
+        now.getMonth() + 1,
+        0,
+        23,
+        59,
+        59,
+      ).getTime();
 
-      const statistics = await transactionService.getStatistics(startOfMonth, endOfMonth);
-      
+      const statistics = await transactionService.getStatistics(
+        startOfMonth,
+        endOfMonth,
+      );
+
       setStats({
         totalIncome: statistics.totalIncome,
         totalExpense: statistics.totalExpense,
         balance: statistics.balance,
       });
 
+      const goals = await getGoalsCollection().query().fetch()
+      const budgets = await getBudgetsCollection().query().fetch()
+      const transactions = await getTransactionsCollection().query().fetch()
+      console.log('Список всех бюджетов', budgets.map(el => el._raw))
+      console.log('Список всех целей', goals.map(el => el._raw))
+      console.log('Список всех транзакций', transactions.map(el => el._raw))
+
+
       const recent = await transactionService.getRecentTransactions(50);
-      
+
       // Получаем все категории для маппинга
       const allCategories = await categoryService.getAllCategories();
       const categoryMap = new Map<string, any>();
-      
+
       // Функция для рекурсивного добавления всех категорий (включая подкатегории)
       const addCategoriesToMap = (cats: any[]) => {
         cats.forEach(cat => {
@@ -75,19 +101,23 @@ export const HomeScreen: React.FC<MainTabScreenProps<'Home'>> = ({ navigation })
           }
         });
       };
-      
+
       // Получаем деревья категорий для расходов и доходов
-      const expenseTree = await categoryService.getCategoriesByTypeWithTree('expense');
-      const incomeTree = await categoryService.getCategoriesByTypeWithTree('income');
-      
+      const expenseTree = await categoryService.getCategoriesByTypeWithTree(
+        'expense',
+      );
+      const incomeTree = await categoryService.getCategoriesByTypeWithTree(
+        'income',
+      );
+
       addCategoriesToMap(expenseTree);
       addCategoriesToMap(incomeTree);
-      
+
       // Форматируем транзакции для отображения
       const formattedTransactions = recent.map((t: any) => {
         const raw = getRawData(t);
         const category = categoryMap.get(raw.category_id);
-        
+
         return {
           id: t.id || raw.id,
           amount: raw.amount,
@@ -95,22 +125,27 @@ export const HomeScreen: React.FC<MainTabScreenProps<'Home'>> = ({ navigation })
           categoryId: raw.category_id,
           note: raw.note,
           date: raw.date,
-          category: category ? {
-            name: category.name,
-            icon: category.icon,
-            color: category.color,
-          } : {
-            name: 'Без категории',
-            icon: 'help-circle',
-            color: colors.text.secondary,
-          },
+          category: category
+            ? {
+                name: category.name,
+                icon: category.icon,
+                color: category.color,
+              }
+            : {
+                name: 'Без категории',
+                icon: 'help-circle',
+                color: colors.text.secondary,
+              },
         };
       });
-      
+
       // Сортируем по дате (новые сверху)
       formattedTransactions.sort((a, b) => b.date - a.date);
-      
+
       setTransactions(formattedTransactions);
+
+      const totalBalanceCalc = await transactionService.getTotalBalance();
+      setTotalBalance(totalBalanceCalc);
     } catch (error) {
       console.error('Failed to load home data:', error);
     } finally {
@@ -150,7 +185,7 @@ export const HomeScreen: React.FC<MainTabScreenProps<'Home'>> = ({ navigation })
             }
           },
         },
-      ]
+      ],
     );
   };
 
@@ -161,9 +196,9 @@ export const HomeScreen: React.FC<MainTabScreenProps<'Home'>> = ({ navigation })
     } else {
       newDate.setMonth(newDate.getMonth() + 1);
     }
-    
+
     if (newDate > new Date()) return;
-    
+
     setCurrentMonth(newDate);
     setIsLoading(true);
   };
@@ -174,13 +209,13 @@ export const HomeScreen: React.FC<MainTabScreenProps<'Home'>> = ({ navigation })
 
   if (isLoading) {
     return (
-      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
-        <BalanceCard
-          balance={0}
-          income={0}
-          expense={0}
-          isLoading={true}
-        />
+      <View
+        style={[
+          styles.loadingContainer,
+          { backgroundColor: colors.background },
+        ]}
+      >
+        <BalanceCard balance={0} income={0} expense={0} isLoading={true} totalBalance={totalBalance}/>
       </View>
     );
   }
@@ -206,11 +241,11 @@ export const HomeScreen: React.FC<MainTabScreenProps<'Home'>> = ({ navigation })
           >
             <Icon name="chevron-left" size={24} color={colors.text.primary} />
           </TouchableOpacity>
-          
+
           <Text style={[styles.monthText, { color: colors.text.primary }]}>
             {formatMonthYear(currentMonth.getTime())}
           </Text>
-          
+
           <TouchableOpacity
             onPress={() => handleMonthChange('next')}
             style={styles.monthButton}
@@ -219,7 +254,11 @@ export const HomeScreen: React.FC<MainTabScreenProps<'Home'>> = ({ navigation })
             <Icon
               name="chevron-right"
               size={24}
-              color={currentMonth >= new Date() ? colors.text.secondary : colors.text.primary}
+              color={
+                currentMonth >= new Date()
+                  ? colors.text.secondary
+                  : colors.text.primary
+              }
             />
           </TouchableOpacity>
         </View>
@@ -230,6 +269,7 @@ export const HomeScreen: React.FC<MainTabScreenProps<'Home'>> = ({ navigation })
           income={stats.totalIncome}
           expense={stats.totalExpense}
           currency={user?.currency || 'RUB'}
+          totalBalance={totalBalance}
         />
 
         {/* Быстрые действия */}
@@ -264,8 +304,14 @@ export const HomeScreen: React.FC<MainTabScreenProps<'Home'>> = ({ navigation })
         </View>
 
         {transactions.length === 0 ? (
-          <View style={[styles.emptyContainer, { backgroundColor: colors.surface }]}>
-            <Icon name="cash-multiple" size={64} color={colors.text.secondary} />
+          <View
+            style={[styles.emptyContainer, { backgroundColor: colors.surface }]}
+          >
+            <Icon
+              name="cash-multiple"
+              size={64}
+              color={colors.text.secondary}
+            />
             <Text style={[styles.emptyTitle, { color: colors.text.primary }]}>
               Пока нет транзакций
             </Text>
@@ -274,7 +320,10 @@ export const HomeScreen: React.FC<MainTabScreenProps<'Home'>> = ({ navigation })
             </Text>
             <View style={styles.emptyButtons}>
               <TouchableOpacity
-                style={[styles.emptyButton, { backgroundColor: colors.success }]}
+                style={[
+                  styles.emptyButton,
+                  { backgroundColor: colors.success },
+                ]}
                 onPress={() => handleAddTransaction('income')}
               >
                 <Icon name="arrow-up" size={20} color="#FFFFFF" />
@@ -291,7 +340,7 @@ export const HomeScreen: React.FC<MainTabScreenProps<'Home'>> = ({ navigation })
           </View>
         ) : (
           <View style={styles.transactionsList}>
-            {transactions.map((transaction) => (
+            {transactions.map(transaction => (
               <TransactionItem
                 key={transaction.id}
                 transaction={transaction}

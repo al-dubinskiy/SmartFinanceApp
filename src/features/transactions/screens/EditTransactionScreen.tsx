@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Switch,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../../core/hooks/useTheme';
@@ -49,6 +50,10 @@ export const EditTransactionScreen: React.FC<EditTransactionScreenProps> = ({
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Состояния для регулярных транзакций
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurringType, setRecurringType] = useState<'monthly' | 'weekly' | 'yearly'>('monthly');
 
   useEffect(() => {
     loadTransaction();
@@ -67,16 +72,17 @@ export const EditTransactionScreen: React.FC<EditTransactionScreenProps> = ({
 
       if (found) {
         const raw: any = found._raw || found;
-        console.log('sdfsfsdfsdff', raw);
         setAmount(raw.amount?.toString() || '0');
         setNote(raw.note || '');
         setSelectedCategoryId(raw.category_id);
         setTransactionType(raw.type || 'expense');
         setDate(new Date(raw.date || Date.now()));
+        setIsRecurring(raw.is_recurring || false);
+        setRecurringType(raw.recurring_type || 'monthly');
       }
     } catch (error) {
       console.error('Failed to load transaction:', error);
-      Alert.alert('Error', 'Failed to load transaction');
+      Alert.alert('Ошибка', 'Не удалось загрузить транзакцию');
     } finally {
       setIsLoading(false);
     }
@@ -87,7 +93,6 @@ export const EditTransactionScreen: React.FC<EditTransactionScreenProps> = ({
       const cats = await categoryService.getCategoriesByTypeWithTree(transactionType);
       setCategories(cats);
 
-      // Проверяем, что выбранная категория существует в новом типе
       if (selectedCategoryId) {
         const categoryExists = cats.some(c => c._raw.id === selectedCategoryId);
 
@@ -101,16 +106,13 @@ export const EditTransactionScreen: React.FC<EditTransactionScreenProps> = ({
   };
 
   const handleAmountChange = (text: string) => {
-    // Разрешаем только цифры и точку
     let cleaned = text.replace(/[^0-9.]/g, '');
 
-    // Защита от множественных точек
     const parts = cleaned.split('.');
     if (parts.length > 2) {
       cleaned = parts[0] + '.' + parts.slice(1).join('');
     }
 
-    // Ограничиваем 2 знака после запятой
     if (parts.length === 2 && parts[1].length > 2) {
       cleaned = parts[0] + '.' + parts[1].slice(0, 2);
     }
@@ -120,25 +122,45 @@ export const EditTransactionScreen: React.FC<EditTransactionScreenProps> = ({
 
   const getNumericAmount = (): number => {
     if (!amount || amount === '') return 0;
-    return parseFloat(amount);
+    const parsed = parseFloat(amount);
+    return isNaN(parsed) ? 0 : parsed;
   };
 
   const handleTypeChange = (type: 'income' | 'expense') => {
     setTransactionType(type);
+    if (type === 'expense') {
+      setIsRecurring(false);
+    }
   };
 
   const handleSave = async () => {
     const numericAmount = getNumericAmount();
-    if (isNaN(numericAmount) || numericAmount <= 0) {
-      Alert.alert('Error', 'Please enter a valid amount');
+    
+    if (numericAmount <= 0) {
+      Alert.alert('Ошибка', 'Введите корректную сумму');
       return;
     }
 
     if (!selectedCategoryId) {
-      Alert.alert('Error', 'Please select a category');
+      Alert.alert('Ошибка', 'Выберите категорию');
       return;
     }
 
+    if (isRecurring && transactionType === 'income') {
+      Alert.alert(
+        'Подтверждение',
+        'Это регулярный доход. Он будет автоматически добавляться по расписанию. Продолжить?',
+        [
+          { text: 'Отмена', style: 'cancel' },
+          { text: 'Продолжить', onPress: () => saveTransaction(numericAmount) }
+        ]
+      );
+    } else {
+      saveTransaction(numericAmount);
+    }
+  };
+
+  const saveTransaction = async (numericAmount: number) => {
     setIsSaving(true);
     try {
       await transactionService.updateTransaction(transactionId, {
@@ -147,12 +169,14 @@ export const EditTransactionScreen: React.FC<EditTransactionScreenProps> = ({
         categoryId: selectedCategoryId,
         note: note.trim() || undefined,
         date: date.getTime(),
+        isRecurring: isRecurring && transactionType === 'income',
+        recurringType: isRecurring && transactionType === 'income' ? recurringType : null,
       });
 
       navigation.goBack();
     } catch (error) {
       console.error('Failed to update transaction:', error);
-      Alert.alert('Error', 'Failed to update transaction');
+      Alert.alert('Ошибка', 'Не удалось обновить транзакцию');
     } finally {
       setIsSaving(false);
     }
@@ -160,19 +184,19 @@ export const EditTransactionScreen: React.FC<EditTransactionScreenProps> = ({
 
   const handleDelete = () => {
     Alert.alert(
-      'Delete Transaction',
-      'Are you sure you want to delete this transaction?',
+      'Удаление транзакции',
+      'Вы уверены, что хотите удалить эту транзакцию?',
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: 'Отмена', style: 'cancel' },
         {
-          text: 'Delete',
+          text: 'Удалить',
           style: 'destructive',
           onPress: async () => {
             try {
               await transactionService.deleteTransaction(transactionId);
               navigation.goBack();
             } catch (error) {
-              Alert.alert('Error', 'Failed to delete transaction');
+              Alert.alert('Ошибка', 'Не удалось удалить транзакцию');
             }
           },
         },
@@ -199,6 +223,8 @@ export const EditTransactionScreen: React.FC<EditTransactionScreenProps> = ({
     );
   }
 
+  const numericAmount = getNumericAmount();
+
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.background }]}
@@ -214,7 +240,7 @@ export const EditTransactionScreen: React.FC<EditTransactionScreenProps> = ({
           <Icon name="arrow-left" size={24} color={colors.text.primary} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text.primary }]}>
-          Edit Transaction
+          Редактирование транзакции
         </Text>
         <TouchableOpacity onPress={handleDelete} style={styles.deleteIcon}>
           <Icon name="delete" size={24} color={colors.error} />
@@ -259,7 +285,7 @@ export const EditTransactionScreen: React.FC<EditTransactionScreenProps> = ({
                 },
               ]}
             >
-              Expense
+              Расход
             </Text>
           </TouchableOpacity>
 
@@ -292,7 +318,7 @@ export const EditTransactionScreen: React.FC<EditTransactionScreenProps> = ({
                 },
               ]}
             >
-              Income
+              Доход
             </Text>
           </TouchableOpacity>
         </View>
@@ -302,7 +328,7 @@ export const EditTransactionScreen: React.FC<EditTransactionScreenProps> = ({
           style={[styles.amountContainer, { backgroundColor: colors.surface }]}
         >
           <Text style={[styles.amountLabel, { color: colors.text.secondary }]}>
-            Amount
+            Сумма
           </Text>
           <TextInput
             style={[
@@ -333,7 +359,7 @@ export const EditTransactionScreen: React.FC<EditTransactionScreenProps> = ({
           <Icon name="pencil" size={20} color={colors.text.secondary} />
           <TextInput
             style={[styles.noteInput, { color: colors.text.primary }]}
-            placeholder="Add a note (optional)"
+            placeholder="Добавить заметку (необязательно)"
             placeholderTextColor={colors.text.secondary}
             value={note}
             onChangeText={setNote}
@@ -341,6 +367,134 @@ export const EditTransactionScreen: React.FC<EditTransactionScreenProps> = ({
             editable={!isSaving}
           />
         </View>
+
+        {/* Recurring Switch - ТОЛЬКО ДЛЯ ДОХОДОВ */}
+        {transactionType === 'income' && (
+          <View style={[styles.recurringContainer, { backgroundColor: colors.surface }]}>
+            <View style={styles.recurringHeader}>
+              <View style={styles.recurringIconContainer}>
+                <Icon 
+                  name={isRecurring ? "calendar-repeat" : "calendar-blank"} 
+                  size={20} 
+                  color={isRecurring ? colors.success : colors.text.secondary} 
+                />
+                <Text style={[styles.recurringTitle, { color: colors.text.primary }]}>
+                  Регулярный доход
+                </Text>
+              </View>
+              <Switch
+                value={isRecurring}
+                onValueChange={setIsRecurring}
+                trackColor={{ false: '#767577', true: colors.success }}
+                thumbColor={isRecurring ? '#FFFFFF' : '#F4F3F4'}
+              />
+            </View>
+            
+            {isRecurring && (
+              <>
+                <Text style={[styles.recurringDescription, { color: colors.text.secondary }]}>
+                  Регулярные доходы будут автоматически добавляться по расписанию. 
+                  Это удобно для зарплаты, аванса и других постоянных поступлений.
+                </Text>
+                
+                {/* Periodicity Selection */}
+                <View style={styles.periodicityContainer}>
+                  <Text style={[styles.periodicityLabel, { color: colors.text.secondary }]}>
+                    Периодичность:
+                  </Text>
+                  <View style={styles.periodicityButtons}>
+                    <TouchableOpacity
+                      style={[
+                        styles.periodicityButton,
+                        recurringType === 'monthly' && {
+                          backgroundColor: colors.success + '20',
+                          borderColor: colors.success,
+                        },
+                        { borderColor: colors.border || '#E0E0E0' }
+                      ]}
+                      onPress={() => setRecurringType('monthly')}
+                    >
+                      <Text
+                        style={[
+                          styles.periodicityText,
+                          {
+                            color: recurringType === 'monthly'
+                              ? colors.success
+                              : colors.text.secondary,
+                          },
+                        ]}
+                      >
+                        Ежемесячно
+                      </Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity
+                      style={[
+                        styles.periodicityButton,
+                        recurringType === 'weekly' && {
+                          backgroundColor: colors.success + '20',
+                          borderColor: colors.success,
+                        },
+                        { borderColor: colors.border || '#E0E0E0' }
+                      ]}
+                      onPress={() => setRecurringType('weekly')}
+                    >
+                      <Text
+                        style={[
+                          styles.periodicityText,
+                          {
+                            color: recurringType === 'weekly'
+                              ? colors.success
+                              : colors.text.secondary,
+                          },
+                        ]}
+                      >
+                        Еженедельно
+                      </Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity
+                      style={[
+                        styles.periodicityButton,
+                        recurringType === 'yearly' && {
+                          backgroundColor: colors.success + '20',
+                          borderColor: colors.success,
+                        },
+                        { borderColor: colors.border || '#E0E0E0' }
+                      ]}
+                      onPress={() => setRecurringType('yearly')}
+                    >
+                      <Text
+                        style={[
+                          styles.periodicityText,
+                          {
+                            color: recurringType === 'yearly'
+                              ? colors.success
+                              : colors.text.secondary,
+                          },
+                        ]}
+                      >
+                        Ежегодно
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+                
+                {/* Info about next occurrence */}
+                <View style={[styles.infoBox, { backgroundColor: colors.background }]}>
+                  <Icon name="information" size={16} color={colors.primary} />
+                  <Text style={[styles.infoText, { color: colors.text.secondary }]}>
+                    Следующее поступление: {formatCurrency(numericAmount)} 
+                    {' '}
+                    {recurringType === 'monthly' && 'через месяц'}
+                    {recurringType === 'weekly' && 'через неделю'}
+                    {recurringType === 'yearly' && 'через год'}
+                  </Text>
+                </View>
+              </>
+            )}
+          </View>
+        )}
 
         {/* Category Selector */}
         <CategorySelector
@@ -358,7 +512,7 @@ export const EditTransactionScreen: React.FC<EditTransactionScreenProps> = ({
         >
           <Icon name="calendar" size={20} color={colors.text.secondary} />
           <Text style={[styles.dateText, { color: colors.text.primary }]}>
-            {date.toLocaleDateString()}
+            {date.toLocaleDateString('ru-RU')}
           </Text>
           <Icon name="chevron-down" size={20} color={colors.text.secondary} />
         </TouchableOpacity>
@@ -367,6 +521,7 @@ export const EditTransactionScreen: React.FC<EditTransactionScreenProps> = ({
           <DateTimePicker
             value={date}
             mode="date"
+            locale="ru-RU"
             onChange={(event, selectedDate) => {
               setShowDatePicker(false);
               if (selectedDate) {
@@ -387,7 +542,7 @@ export const EditTransactionScreen: React.FC<EditTransactionScreenProps> = ({
           ) : (
             <>
               <Icon name="content-save" size={20} color="#FFFFFF" />
-              <Text style={styles.saveButtonText}>Save Changes</Text>
+              <Text style={styles.saveButtonText}>Сохранить изменения</Text>
             </>
           )}
         </TouchableOpacity>
@@ -484,6 +639,70 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     padding: 0,
+  },
+  recurringContainer: {
+    marginHorizontal: 16,
+    marginBottom: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderRadius: 12,
+    gap: 12,
+  },
+  recurringHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  recurringIconContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  recurringTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  recurringDescription: {
+    fontSize: 12,
+    lineHeight: 16,
+    marginTop: 4,
+  },
+  periodicityContainer: {
+    marginTop: 8,
+    gap: 8,
+  },
+  periodicityLabel: {
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  periodicityButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  periodicityButton: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  periodicityText: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  infoBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 8,
+    gap: 8,
+  },
+  infoText: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 16,
   },
   dateContainer: {
     flexDirection: 'row',

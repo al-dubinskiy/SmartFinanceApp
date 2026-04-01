@@ -9,6 +9,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Switch,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../../core/hooks/useTheme';
@@ -47,14 +48,22 @@ export const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [date, setDate] = useState<Date>(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
+  
+  // Новые состояния для регулярных транзакций
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurringType, setRecurringType] = useState<'monthly' | 'weekly' | 'yearly'>('monthly');
 
   useEffect(() => {
     loadCategories();
   }, [transactionType]);
 
+  // Сбрасываем переключатель при смене типа транзакции
+  useEffect(() => {
+    setIsRecurring(false);
+  }, [transactionType]);
+
   const loadCategories = async () => {
     try {
-      // Используем метод, который возвращает дерево категорий
       const cats = await categoryService.getCategoriesByTypeWithTree(
         transactionType,
       )
@@ -65,16 +74,13 @@ export const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({
   };
 
   const handleAmountChange = (text: string) => {
-    // Разрешаем только цифры и точку
     let cleaned = text.replace(/[^0-9.]/g, '');
 
-    // Защита от множественных точек
     const parts = cleaned.split('.');
     if (parts.length > 2) {
       cleaned = parts[0] + '.' + parts.slice(1).join('');
     }
 
-    // Ограничиваем 2 знака после запятой
     if (parts.length === 2 && parts[1].length > 2) {
       cleaned = parts[0] + '.' + parts[1].slice(0, 2);
     }
@@ -99,6 +105,22 @@ export const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({
       return;
     }
 
+    // Валидация для регулярных доходов
+    if (isRecurring && transactionType === 'income') {
+      Alert.alert(
+        'Подтверждение',
+        'Вы добавляете регулярный доход. Он будет автоматически добавляться каждый месяц. Продолжить?',
+        [
+          { text: 'Отмена', style: 'cancel' },
+          { text: 'Продолжить', onPress: saveTransaction }
+        ]
+      );
+    } else {
+      saveTransaction();
+    }
+  };
+
+  const saveTransaction = async () => {
     setIsLoading(true);
     try {
       await transactionService.createTransaction({
@@ -107,7 +129,8 @@ export const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({
         categoryId: selectedCategoryId,
         note: note.trim() || undefined,
         date: date.getTime(),
-        isRecurring: false,
+        isRecurring: isRecurring && transactionType === 'income', // Только для доходов
+        recurringType: isRecurring && transactionType === 'income' ? recurringType : null,
       });
 
       navigation.goBack();
@@ -121,9 +144,12 @@ export const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({
 
   const formatDisplayAmount = () => {
     const num = getNumericAmount();
-    if (num === 0) return formatCurrency(0, user?.currency || 'USD');
-    return formatCurrency(num, user?.currency || 'USD');
+    if (num === 0) return formatCurrency(0, user?.currency || 'RUB');
+    return formatCurrency(num, user?.currency || 'RUB');
   };
+
+  // Получаем текущую сумму для отображения
+  const numericAmount = getNumericAmount();
 
   return (
     <KeyboardAvoidingView
@@ -266,6 +292,133 @@ export const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({
           />
         </View>
 
+        {/* Переключатель регулярного дохода - ТОЛЬКО ДЛЯ ДОХОДОВ */}
+        {transactionType === 'income' && (
+          <View style={[styles.recurringContainer, { backgroundColor: colors.surface }]}>
+            <View style={styles.recurringHeader}>
+              <View style={styles.recurringIconContainer}>
+                <Icon 
+                  name={isRecurring ? "calendar-repeat" : "calendar-blank"} 
+                  size={20} 
+                  color={isRecurring ? colors.success : colors.text.secondary} 
+                />
+                <Text style={[styles.recurringTitle, { color: colors.text.primary }]}>
+                  Регулярный доход
+                </Text>
+              </View>
+              <Switch
+                value={isRecurring}
+                onValueChange={setIsRecurring}
+                trackColor={{ false: '#767577', true: colors.success }}
+                thumbColor={isRecurring ? '#FFFFFF' : '#F4F3F4'}
+              />
+            </View>
+            
+            {isRecurring && (
+              <>
+                <Text style={[styles.recurringDescription, { color: colors.text.secondary }]}>
+                  Регулярные доходы будут автоматически добавляться каждый месяц. Это удобно для зарплаты, аванса и других постоянных поступлений.
+                </Text>
+                
+                {/* Выбор периодичности */}
+                <View style={styles.periodicityContainer}>
+                  <Text style={[styles.periodicityLabel, { color: colors.text.secondary }]}>
+                    Периодичность:
+                  </Text>
+                  <View style={styles.periodicityButtons}>
+                    <TouchableOpacity
+                      style={[
+                        styles.periodicityButton,
+                        recurringType === 'monthly' && {
+                          backgroundColor: colors.success + '20',
+                          borderColor: colors.success,
+                        },
+                        { borderColor: colors.border }
+                      ]}
+                      onPress={() => setRecurringType('monthly')}
+                    >
+                      <Text
+                        style={[
+                          styles.periodicityText,
+                          {
+                            color: recurringType === 'monthly'
+                              ? colors.success
+                              : colors.text.secondary,
+                          },
+                        ]}
+                      >
+                        Ежемесячно
+                      </Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity
+                      style={[
+                        styles.periodicityButton,
+                        recurringType === 'weekly' && {
+                          backgroundColor: colors.success + '20',
+                          borderColor: colors.success,
+                        },
+                        { borderColor: colors.border }
+                      ]}
+                      onPress={() => setRecurringType('weekly')}
+                    >
+                      <Text
+                        style={[
+                          styles.periodicityText,
+                          {
+                            color: recurringType === 'weekly'
+                              ? colors.success
+                              : colors.text.secondary,
+                          },
+                        ]}
+                      >
+                        Еженедельно
+                      </Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity
+                      style={[
+                        styles.periodicityButton,
+                        recurringType === 'yearly' && {
+                          backgroundColor: colors.success + '20',
+                          borderColor: colors.success,
+                        },
+                        { borderColor: colors.border }
+                      ]}
+                      onPress={() => setRecurringType('yearly')}
+                    >
+                      <Text
+                        style={[
+                          styles.periodicityText,
+                          {
+                            color: recurringType === 'yearly'
+                              ? colors.success
+                              : colors.text.secondary,
+                          },
+                        ]}
+                      >
+                        Ежегодно
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+                
+                {/* Информация о следующем поступлении */}
+                <View style={[styles.infoBox, { backgroundColor: colors.background }]}>
+                  <Icon name="information" size={16} color={colors.primary} />
+                  <Text style={[styles.infoText, { color: colors.text.secondary }]}>
+                    Следующее поступление: {formatCurrency(numericAmount, user?.currency || 'RUB')} 
+                    {' '}
+                    {recurringType === 'monthly' && 'через месяц'}
+                    {recurringType === 'weekly' && 'через неделю'}
+                    {recurringType === 'yearly' && 'через год'}
+                  </Text>
+                </View>
+              </>
+            )}
+          </View>
+        )}
+
         {/* Выбор категории */}
         <CategorySelector
           categories={categories}
@@ -296,7 +449,7 @@ export const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({
                 setDate(selectedDate);
               }
             }}
-            locale="ru-RU" // Добавлено для русского языка
+            locale="ru-RU"
           />
         )}
 
@@ -398,6 +551,70 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     padding: 0,
+  },
+  recurringContainer: {
+    marginHorizontal: 16,
+    marginBottom: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderRadius: 12,
+    gap: 12,
+  },
+  recurringHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  recurringIconContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  recurringTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  recurringDescription: {
+    fontSize: 12,
+    lineHeight: 16,
+    marginTop: 4,
+  },
+  periodicityContainer: {
+    marginTop: 8,
+    gap: 8,
+  },
+  periodicityLabel: {
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  periodicityButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  periodicityButton: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  periodicityText: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  infoBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 8,
+    gap: 8,
+  },
+  infoText: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 16,
   },
   dateContainer: {
     flexDirection: 'row',

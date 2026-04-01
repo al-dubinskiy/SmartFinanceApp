@@ -49,7 +49,7 @@ const DatabaseInitializer = ({ children }: { children: React.ReactNode }) => {
         // База данных уже создана при импорте
         
         setStatus('Seeding test data...');
-        await seedTestData();
+        // await seedTestData();
         
         setStatus('Ready!');
         setIsReady(true);
