@@ -128,14 +128,36 @@ export const BarChart: React.FC<BarChartProps> = ({
 Расходы более чем на 20% ниже среднего уровня. Отличная работа!
 
 💡 Совет: Анализируйте красные и оранжевые столбцы, чтобы найти возможности для оптимизации бюджета.`;
-  const statsInfoText = `📈 Статистика расходов
+  const statsInfoText = `📈 Статистика периода:
 
 Среднее — средняя сумма расходов за период.
 Рассчитывается как: сумма всех расходов / количество дней.
 
-Максимум/минимум — наибольшая/найменьшая сумма расходов в выбранном периоде (до текущего дня/недели/месяца).
+Максимум — наибольшая сумма расходов за один день в выбранном периоде.
 
-💡 Совет: Сравнивайте свои траты с этими показателями, чтобы лучше контролировать бюджет.`;
+Минимум — наименьшая сумма расходов за один день (может быть 0, если не было трат).
+
+📊 Тренд — показывает изменение расходов между последними двумя периодами.
+
+Как рассчитывается тренд:
+1. Берутся два последних периода в выбранном интервале:
+   • Для недели: последние два дня
+   • Для месяца: последние две недели
+   • Для года: последние два месяца
+
+2. Сравниваются расходы за эти периоды:
+   Тренд (%) = ((Расходы в последнем периоде - Расходы в предыдущем периоде) / Расходы в предыдущем периоде) × 100%
+
+Пример:
+• Расходы в марте: 100 000 ₽
+• Расходы в апреле: 120 000 ₽
+• Тренд = ((120 000 - 100 000) / 100 000) × 100% = +20%
+
+Значение тренда:
+📈 ↑ Положительный тренд — расходы выросли
+📉 ↓ Отрицательный тренд — расходы снизились
+
+💡 Совет: Сравнивайте свои ежедневные траты с этими показателями, чтобы лучше контролировать бюджет.`;
 
   if (data.length === 0) {
     return (
@@ -190,6 +212,7 @@ export const BarChart: React.FC<BarChartProps> = ({
     const lastValue = nonZeroValues[nonZeroValues.length - 1].value;
     const previousValue = nonZeroValues[nonZeroValues.length - 2].value;
 
+    console.log(lastValue, previousValue)
     if (previousValue === 0) return null;
 
     const percentChange = ((lastValue - previousValue) / previousValue) * 100;
@@ -289,9 +312,20 @@ export const BarChart: React.FC<BarChartProps> = ({
     >
       {/* Заголовок с дополнительной информацией */}
       <View style={styles.header}>
+        <View style={{flexDirection: "row", alignItems: 'center', gap: 6}}>
         <Text style={[styles.title, { color: colors.text.primary }]}>
           {title}
         </Text>
+         <TouchableOpacity
+          onPress={() => showInfo('Динамика расходов', statsInfoText)}
+        >
+          <Icon
+            name="information-outline"
+            size={18}
+            color={colors.text.secondary}
+          />
+        </TouchableOpacity>
+        </View>
         {showTrend && trend && (
           <View style={styles.trendContainer}>
             <Text style={[styles.trendLabel, { color: colors.text.secondary }]}>
@@ -321,15 +355,6 @@ export const BarChart: React.FC<BarChartProps> = ({
         <Text style={[styles.statsTitle, { color: colors.text.secondary }]}>
           Статистика периода
         </Text>
-        <TouchableOpacity
-          onPress={() => showInfo('Статистика расходов', statsInfoText)}
-        >
-          <Icon
-            name="information-outline"
-            size={18}
-            color={colors.text.secondary}
-          />
-        </TouchableOpacity>
       </View>
 
       <View style={[styles.statsRow, { backgroundColor: colors.background }]}>
@@ -379,7 +404,7 @@ export const BarChart: React.FC<BarChartProps> = ({
             height={height}
             barWidth={barWidth}
             spacing={spacing}
-            roundedTop
+            // roundedTop
             roundedBottom={false}
             showGradient={false}
             yAxisTextStyle={{ color: colors.text.secondary, fontSize: 11 }}

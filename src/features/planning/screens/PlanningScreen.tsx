@@ -34,19 +34,18 @@ export const PlanningScreen: React.FC<MainTabScreenProps<'Planning'>> = () => {
 
   const loadData = useCallback(async () => {
     try {
-      // Load budgets with progress
+      // Загружаем бюджеты с прогрессом
       const budgetsProgress = await budgetService.getBudgetsProgress();
       setBudgets(budgetsProgress);
 
-      // Load goals
+      // Загружаем цели
       const activeGoals = await goalService.getActiveGoals();
       const completed = await goalService.getCompletedGoals();
       
-      // Get category info for goals (for display)
       setGoals(activeGoals);
       setCompletedGoals(completed);
     } catch (error) {
-      console.error('Failed to load planning data:', error);
+      console.error('Не удалось загрузить данные планирования:', error);
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -64,19 +63,19 @@ export const PlanningScreen: React.FC<MainTabScreenProps<'Planning'>> = () => {
 
   const handleDeleteBudget = (budgetId: string) => {
     Alert.alert(
-      'Delete Budget',
-      'Are you sure you want to delete this budget?',
+      'Удаление бюджета',
+      'Вы уверены, что хотите удалить этот бюджет?',
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: 'Отмена', style: 'cancel' },
         {
-          text: 'Delete',
+          text: 'Удалить',
           style: 'destructive',
           onPress: async () => {
             try {
               await budgetService.deleteBudget(budgetId);
               await loadData();
             } catch (error) {
-              Alert.alert('Error', 'Failed to delete budget');
+              Alert.alert('Ошибка', 'Не удалось удалить бюджет');
             }
           },
         },
@@ -86,19 +85,19 @@ export const PlanningScreen: React.FC<MainTabScreenProps<'Planning'>> = () => {
 
   const handleDeleteGoal = (goalId: string) => {
     Alert.alert(
-      'Delete Goal',
-      'Are you sure you want to delete this goal?',
+      'Удаление цели',
+      'Вы уверены, что хотите удалить эту цель?',
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: 'Отмена', style: 'cancel' },
         {
-          text: 'Delete',
+          text: 'Удалить',
           style: 'destructive',
           onPress: async () => {
             try {
               await goalService.deleteGoal(goalId);
               await loadData();
             } catch (error) {
-              Alert.alert('Error', 'Failed to delete goal');
+              Alert.alert('Ошибка', 'Не удалось удалить цель');
             }
           },
         },
@@ -108,23 +107,23 @@ export const PlanningScreen: React.FC<MainTabScreenProps<'Planning'>> = () => {
 
   const handleAddToGoal = (goalId: string) => {
     Alert.prompt(
-      'Add Funds',
-      'Enter amount to add:',
+      'Добавить средства',
+      'Введите сумму для пополнения:',
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: 'Отмена', style: 'cancel' },
         {
-          text: 'Add',
+          text: 'Добавить',
           onPress: async (amount) => {
             const numericAmount = parseFloat(amount || '0');
             if (isNaN(numericAmount) || numericAmount <= 0) {
-              Alert.alert('Error', 'Please enter a valid amount');
+              Alert.alert('Ошибка', 'Введите корректную сумму');
               return;
             }
             try {
               await goalService.addToGoal(goalId, numericAmount);
               await loadData();
             } catch (error) {
-              Alert.alert('Error', 'Failed to add funds');
+              Alert.alert('Ошибка', 'Не удалось добавить средства');
             }
           },
         },
@@ -152,29 +151,29 @@ export const PlanningScreen: React.FC<MainTabScreenProps<'Planning'>> = () => {
           />
         }
       >
-        {/* Summary Section */}
+        {/* Сводка по бюджетам */}
         <View style={styles.summaryContainer}>
           <View style={[styles.summaryCard, { backgroundColor: colors.surface }]}>
             <Text style={[styles.summaryLabel, { color: colors.text.secondary }]}>
-              Total Budget
+              Общий бюджет
             </Text>
             <Text style={[styles.summaryAmount, { color: colors.text.primary }]}>
-              {formatCurrency(totalBudget, user?.currency || 'USD')}
+              {formatCurrency(totalBudget, user?.currency || 'RUB')}
             </Text>
           </View>
           
           <View style={[styles.summaryCard, { backgroundColor: colors.surface }]}>
             <Text style={[styles.summaryLabel, { color: colors.text.secondary }]}>
-              Total Spent
+              Потрачено
             </Text>
             <Text style={[styles.summaryAmount, { color: colors.error }]}>
-              {formatCurrency(totalSpent, user?.currency || 'USD')}
+              {formatCurrency(totalSpent, user?.currency || 'RUB')}
             </Text>
           </View>
           
           <View style={[styles.summaryCard, { backgroundColor: colors.surface }]}>
             <Text style={[styles.summaryLabel, { color: colors.text.secondary }]}>
-              Remaining
+              Осталось
             </Text>
             <Text
               style={[
@@ -182,22 +181,22 @@ export const PlanningScreen: React.FC<MainTabScreenProps<'Planning'>> = () => {
                 { color: totalRemaining >= 0 ? colors.success : colors.error },
               ]}
             >
-              {formatCurrency(totalRemaining, user?.currency || 'USD')}
+              {formatCurrency(totalRemaining, user?.currency || 'RUB')}
             </Text>
           </View>
         </View>
 
-        {/* Budgets Section */}
+        {/* Раздел бюджетов */}
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
-            Monthly Budgets
+            Месячные бюджеты
           </Text>
           <TouchableOpacity
             style={[styles.addButton, { backgroundColor: colors.primary }]}
             onPress={() => setShowAddBudget(true)}
           >
             <Icon name="plus" size={20} color="#FFFFFF" />
-            <Text style={styles.addButtonText}>Add Budget</Text>
+            <Text style={styles.addButtonText}>Добавить бюджет</Text>
           </TouchableOpacity>
         </View>
 
@@ -205,23 +204,23 @@ export const PlanningScreen: React.FC<MainTabScreenProps<'Planning'>> = () => {
           <View style={[styles.emptyContainer, { backgroundColor: colors.surface }]}>
             <Icon name="chart-bell-curve" size={64} color={colors.text.secondary} />
             <Text style={[styles.emptyTitle, { color: colors.text.primary }]}>
-              No Budgets Yet
+              Пока нет бюджетов
             </Text>
             <Text style={[styles.emptyText, { color: colors.text.secondary }]}>
-              Create budgets to track your spending
+              Создайте бюджеты для отслеживания расходов
             </Text>
             <TouchableOpacity
               style={[styles.emptyButton, { backgroundColor: colors.primary }]}
               onPress={() => setShowAddBudget(true)}
             >
-              <Text style={styles.emptyButtonText}>Create Budget</Text>
+              <Text style={styles.emptyButtonText}>Создать бюджет</Text>
             </TouchableOpacity>
           </View>
         ) : (
           budgets.map((item) => (
             <BudgetCard
               key={item.budget.id}
-              categoryName={item.category?.name || 'Unknown'}
+              categoryName={item.category?.name || 'Неизвестно'}
               categoryIcon={item.category?.icon || 'help'}
               categoryColor={item.category?.color || colors.primary}
               budgetAmount={item.budget.amount}
@@ -229,23 +228,23 @@ export const PlanningScreen: React.FC<MainTabScreenProps<'Planning'>> = () => {
               remaining={item.remaining}
               percentage={item.percentage}
               status={item.status}
-              currency={user?.currency || 'USD'}
+              currency={user?.currency || 'RUB'}
               onDelete={() => handleDeleteBudget(item.budget.id)}
             />
           ))
         )}
 
-        {/* Goals Section */}
+        {/* Раздел целей */}
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
-            Financial Goals
+            Финансовые цели
           </Text>
           <TouchableOpacity
             style={[styles.addButton, { backgroundColor: colors.primary }]}
             onPress={() => setShowAddGoal(true)}
           >
             <Icon name="plus" size={20} color="#FFFFFF" />
-            <Text style={styles.addButtonText}>Add Goal</Text>
+            <Text style={styles.addButtonText}>Добавить цель</Text>
           </TouchableOpacity>
         </View>
 
@@ -253,16 +252,16 @@ export const PlanningScreen: React.FC<MainTabScreenProps<'Planning'>> = () => {
           <View style={[styles.emptyContainer, { backgroundColor: colors.surface }]}>
             <Icon name="target" size={64} color={colors.text.secondary} />
             <Text style={[styles.emptyTitle, { color: colors.text.primary }]}>
-              No Goals Yet
+              Пока нет целей
             </Text>
             <Text style={[styles.emptyText, { color: colors.text.secondary }]}>
-              Set financial goals to stay motivated
+              Поставьте финансовые цели для мотивации
             </Text>
             <TouchableOpacity
               style={[styles.emptyButton, { backgroundColor: colors.primary }]}
               onPress={() => setShowAddGoal(true)}
             >
-              <Text style={styles.emptyButtonText}>Create Goal</Text>
+              <Text style={styles.emptyButtonText}>Создать цель</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -279,7 +278,7 @@ export const PlanningScreen: React.FC<MainTabScreenProps<'Planning'>> = () => {
                 deadline={goal.deadline}
                 progress={goal.progress}
                 isCompleted={false}
-                currency={user?.currency || 'USD'}
+                currency={user?.currency || 'RUB'}
                 onAdd={() => handleAddToGoal(goal.id)}
                 onDelete={() => handleDeleteGoal(goal.id)}
               />
@@ -288,7 +287,7 @@ export const PlanningScreen: React.FC<MainTabScreenProps<'Planning'>> = () => {
             {completedGoals.length > 0 && (
               <View style={styles.completedSection}>
                 <Text style={[styles.completedTitle, { color: colors.text.secondary }]}>
-                  Completed Goals
+                  Выполненные цели
                 </Text>
                 {completedGoals.map((goal: any) => (
                   <GoalCard
@@ -302,7 +301,7 @@ export const PlanningScreen: React.FC<MainTabScreenProps<'Planning'>> = () => {
                     deadline={goal.deadline}
                     progress={goal.progress}
                     isCompleted={true}
-                    currency={user?.currency || 'USD'}
+                    currency={user?.currency || 'RUB'}
                     onDelete={() => handleDeleteGoal(goal.id)}
                   />
                 ))}
@@ -329,12 +328,13 @@ export const PlanningScreen: React.FC<MainTabScreenProps<'Planning'>> = () => {
   );
 };
 
-// Helper function
+// Вспомогательная функция форматирования валюты
 const formatCurrency = (amount: number, currency: string) => {
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat('ru-RU', {
     style: 'currency',
     currency,
-    minimumFractionDigits: 2,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   }).format(amount);
 };
 

@@ -29,7 +29,7 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
   remaining,
   percentage,
   status,
-  currency = 'USD',
+  currency = 'RUB',
   onPress,
   onEdit,
   onDelete,
@@ -57,7 +57,7 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
               {categoryName}
             </Text>
             <Text style={[styles.budgetAmount, { color: colors.text.secondary }]}>
-              Budget: {formatCurrency(budgetAmount, currency)}
+              Бюджет: {formatCurrency(budgetAmount, currency)}
             </Text>
           </View>
         </View>
@@ -79,7 +79,7 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
       <View style={styles.stats}>
         <View style={styles.statItem}>
           <Text style={[styles.statLabel, { color: colors.text.secondary }]}>
-            Spent
+            Потрачено
           </Text>
           <Text style={[styles.statValue, { color: colors.error }]}>
             {formatCurrency(spent, currency)}
@@ -88,7 +88,7 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
         
         <View style={styles.statItem}>
           <Text style={[styles.statLabel, { color: colors.text.secondary }]}>
-            Remaining
+            Осталось
           </Text>
           <Text
             style={[
@@ -105,12 +105,12 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
 
       {status === 'exceeded' && (
         <Text style={[styles.warningText, { color: colors.error }]}>
-          ⚠️ Budget exceeded by {formatCurrency(Math.abs(remaining), currency)}
+          ⚠️ Бюджет превышен на {formatCurrency(Math.abs(remaining), currency)}
         </Text>
       )}
       {status === 'warning' && (
         <Text style={[styles.warningText, { color: colors.warning }]}>
-          ⚠️ Approaching budget limit ({(100 - percentage).toFixed(0)}% remaining)
+          ⚠️ Близко к лимиту бюджета (осталось {(100 - percentage).toFixed(0)}%)
         </Text>
       )}
     </TouchableOpacity>

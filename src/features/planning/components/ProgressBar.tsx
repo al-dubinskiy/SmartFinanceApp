@@ -49,7 +49,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
       {showLabel && (
         <View style={styles.labelContainer}>
           <Text style={[styles.progressText, { color: colors.text.secondary }]}>
-            Progress: {Math.min(progress, 100).toFixed(1)}%
+            Прогресс: {Math.min(progress, 100).toFixed(1)}%
           </Text>
         </View>
       )}

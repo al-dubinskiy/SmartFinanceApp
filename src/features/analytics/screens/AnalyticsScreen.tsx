@@ -199,7 +199,7 @@ export const AnalyticsScreen: React.FC<
       );
       
       weekData.push({
-        shortLabel: capitalizeStr(weeks[weekIndex].split(' ')[0].slice(3) + " " + weeks[weekIndex].split(' ')[1]),
+        shortLabel: capitalizeStr(weeks[weekIndex].split(' ')[0].slice(0, 3) + " " + weeks[weekIndex].split(' ')[1]),
         label: weeks[weekIndex],
         value: statistics.totalExpense,
       });
