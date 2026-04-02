@@ -10,10 +10,7 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../../core/hooks/useTheme';
-import {
-  formatCurrency,
-  formatDateShort,
-} from '../../../core/utils/formatters';
+import { formatCurrency } from '../../../core/utils/formatters';
 import forecastService from '../../../core/services/forecast.service';
 
 interface ForecastCardProps {
@@ -25,25 +22,30 @@ interface ForecastCardProps {
       | 'dailyLimit'
       | 'predictedBalance'
       | 'dailyForecast'
-      | 'avgDailySpending',
+      | 'avgDailySpending'
+      | 'riskLevel',
   ) => void;
+
+  isFocused?: boolean;
 }
 
 export const ForecastCard: React.FC<ForecastCardProps> = ({
   currency = 'RUB',
   onInfoPress,
+  isFocused,
 }) => {
   const { colors } = useTheme();
   const [prediction, setPrediction] = useState<any>(null);
   const [avgDailySpending, setAvgDailySpending] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [isFirstLoad, setIsFirstLoad] = useState(true);
   const [expanded, setExpanded] = useState(false);
   const [showAllIncomes, setShowAllIncomes] = useState(false);
   const [displayCount, setDisplayCount] = useState(3);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [isFocused]);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -57,6 +59,7 @@ export const ForecastCard: React.FC<ForecastCardProps> = ({
       console.error('Failed to load prediction:', error);
     } finally {
       setIsLoading(false);
+      setIsFirstLoad(false);
     }
   };
 
@@ -145,7 +148,7 @@ export const ForecastCard: React.FC<ForecastCardProps> = ({
     }
   };
 
-  if (isLoading) {
+  if (isLoading && isFirstLoad) {
     return (
       <View style={[styles.container, { backgroundColor: colors.surface }]}>
         <ActivityIndicator size="large" color={colors.primary} />
@@ -177,9 +180,21 @@ export const ForecastCard: React.FC<ForecastCardProps> = ({
       >
         <Icon name={getRiskIcon()} size={24} color={getRiskColor()} />
         <View style={styles.riskTextContainer}>
-          <Text style={[styles.riskLabel, { color: colors.text.secondary }]}>
-            Риск денежного потока
-          </Text>
+          <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+            <Text style={[styles.riskLabel, { color: colors.text.secondary }]}>
+              Риск денежного потока
+            </Text>
+            <TouchableOpacity
+              style={styles.smallInfoButton}
+              onPress={() => onInfoPress?.('riskLevel')}
+            >
+              <Icon
+                name="information-outline"
+                size={16}
+                color={colors.text.secondary}
+              />
+            </TouchableOpacity>
+          </View>
           <Text style={[styles.riskValue, { color: getRiskColor() }]}>
             {getRiskText()}
           </Text>
@@ -227,6 +242,17 @@ export const ForecastCard: React.FC<ForecastCardProps> = ({
               >
                 Ожидаемые доходы (в этом месяце)
               </Text>
+
+              <TouchableOpacity
+                style={styles.smallInfoButton}
+                onPress={() => onInfoPress?.('expectedIncome')}
+              >
+                <Icon
+                  name="information-outline"
+                  size={16}
+                  color={colors.text.secondary}
+                />
+              </TouchableOpacity>
             </View>
             <Text
               style={[
@@ -434,30 +460,6 @@ export const ForecastCard: React.FC<ForecastCardProps> = ({
         </View>
       </View>
 
-      {/* Comparison */}
-      <View
-        style={[
-          styles.comparisonContainer,
-          { backgroundColor: colors.background },
-        ]}
-      >
-        <Icon name="compare" size={20} color={colors.primary} />
-        <Text style={[styles.comparisonText, { color: colors.text.secondary }]}>
-          {avgDailySpending > prediction.recommendedDailyLimit
-            ? `⚠️ Ваши средние траты (${formatCurrency(
-                avgDailySpending,
-                currency,
-              )}) превышают рекомендуемый лимит на ${formatCurrency(
-                avgDailySpending - prediction.recommendedDailyLimit,
-                currency,
-              )} в день.`
-            : `✅ Ваши средние траты (${formatCurrency(
-                avgDailySpending,
-                currency,
-              )}) ниже рекомендуемого лимита. Отличная работа!`}
-        </Text>
-      </View>
-
       {/* Expand/Collapse */}
       <View style={styles.expandSection}>
         <TouchableOpacity
@@ -538,7 +540,7 @@ export const ForecastCard: React.FC<ForecastCardProps> = ({
                   prediction.recommendedDailyLimit,
                   currency,
                 )} в день.`
-              : '🎉 Отличная работа! Текущий уровень расходов позволяет комфортно завершить месяц.')}
+              : '🎉 Отличная работа! Ваши средние траты ниже рекомендуемого лимита.')}
         </Text>
       </View>
     </View>

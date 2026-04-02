@@ -56,6 +56,7 @@ export const TransactionDetailScreen: React.FC<
     }
   };
 
+  console.log('fdsfsdf', transaction)
   const handleDelete = () => {
     Alert.alert(
       'Delete Transaction',
@@ -80,6 +81,34 @@ export const TransactionDetailScreen: React.FC<
 
   const handleEdit = () => {
     navigation.navigate('EditTransaction', { transactionId });
+  };
+
+  // Функция для получения текста периодичности на русском
+  const getRecurringTypeText = (type: string | null | undefined): string => {
+    switch (type) {
+      case 'monthly':
+        return 'Ежемесячно';
+      case 'weekly':
+        return 'Еженедельно';
+      case 'yearly':
+        return 'Ежегодно';
+      default:
+        return '';
+    }
+  };
+
+  // Функция для получения иконки периодичности
+  const getRecurringIcon = (type: string | null | undefined): string => {
+    switch (type) {
+      case 'monthly':
+        return 'calendar-month';
+      case 'weekly':
+        return 'calendar-week';
+      case 'yearly':
+        return 'calendar-today';
+      default:
+        return 'calendar-repeat';
+    }
   };
 
   if (isLoading) {
@@ -117,6 +146,8 @@ export const TransactionDetailScreen: React.FC<
   const amountColor =
     transaction.type === 'income' ? colors.success : colors.error;
   const amountPrefix = transaction.type === 'income' ? '+' : '-';
+  const isRecurring = transaction._raw.is_recurring || false;
+  const recurringType = transaction._raw.recurring_type;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -177,6 +208,44 @@ export const TransactionDetailScreen: React.FC<
               <Text style={[styles.infoValue, { color: colors.text.primary }]}>
                 {category?.name || 'Unknown'}
               </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Recurring Info */}
+        <View style={[styles.infoCard, { backgroundColor: colors.surface }]}>
+          <View style={styles.infoRow}>
+            <Icon
+              name={getRecurringIcon(recurringType)}
+              size={24}
+              color={isRecurring ? colors.primary : colors.text.secondary}
+            />
+            <View style={styles.infoContent}>
+              <Text
+                style={[styles.infoLabel, { color: colors.text.secondary }]}
+              >
+                Recurring
+              </Text>
+              <Text style={[styles.infoValue, { color: colors.text.primary }]}>
+                {isRecurring ? 'Да' : 'Нет'}
+              </Text>
+              {isRecurring && recurringType && (
+                <View style={styles.recurringBadge}>
+                  <Icon
+                    name={getRecurringIcon(recurringType)}
+                    size={14}
+                    color={colors.primary}
+                  />
+                  <Text
+                    style={[
+                      styles.recurringTypeText,
+                      { color: colors.primary },
+                    ]}
+                  >
+                    {getRecurringTypeText(recurringType)}
+                  </Text>
+                </View>
+              )}
             </View>
           </View>
         </View>
@@ -367,6 +436,21 @@ const styles = StyleSheet.create({
   },
   infoValue: {
     fontSize: 16,
+    fontWeight: '500',
+  },
+  recurringBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: 'rgba(78, 84, 200, 0.1)',
+    alignSelf: 'flex-start',
+  },
+  recurringTypeText: {
+    fontSize: 12,
     fontWeight: '500',
   },
   backButton: {

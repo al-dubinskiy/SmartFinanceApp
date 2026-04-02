@@ -90,54 +90,49 @@ class ForecastService {
     
     if (daysHistory === 0) return 0;
     const avgSpending = statistics.totalExpense / daysHistory;
-    
+    console.log(`📉 Сумма всех расходов за последних 30 дней: ${statistics.totalExpense.toLocaleString()} ₽, средние: ${Math.round(avgSpending)} ₽/день`);
+
     return avgSpending === 0 ? 0 : Math.max(100, avgSpending);
   }
 
   /**
    * Получает все регулярные доходы из базы (с is_recurring: true)
    */
-private async getAllRecurringIncomes(): Promise<any[]> {
-  const transactions = getTransactionsCollection();
-  const allTransactions = await transactions.query().fetch();
-  
-  // Фильтруем только регулярные доходы
-  const recurringIncomes = allTransactions.filter(t => {
-    const raw = t._raw || t;
-    return raw.type === 'income' && raw.is_recurring === true;
-  });
-  
-  // Дедуплицируем по заметке, сумме и типу периодичности
-  const uniqueMap = new Map<string, any>();
-  
-  recurringIncomes.forEach(inc => {
-    const raw = inc._raw || inc;
-    const key = `${raw.note}_${raw.amount}_${raw.recurring_type}`;
+  private async getAllRecurringIncomes(): Promise<any[]> {
+    const transactions = getTransactionsCollection();
+    const allTransactions = await transactions.query().fetch();
     
-    if (!uniqueMap.has(key)) {
-      uniqueMap.set(key, inc);
-    }
-  });
-  
-  const uniqueIncomes = Array.from(uniqueMap.values());
-  
-  console.log(`📊 Найдено регулярных доходов в базе: ${recurringIncomes.length}`);
-  console.log(`📊 Уникальных регулярных доходов: ${uniqueIncomes.length}`);
-  
-  uniqueIncomes.forEach(inc => {
-    const raw = inc._raw || inc;
-    console.log(`  - ${new Date(raw.date).toISOString().split('T')[0]}: ${raw.amount} ₽ - ${raw.note} (${raw.recurring_type})`);
-  });
-  
-  return uniqueIncomes;
-}
+    const recurringIncomes = allTransactions.filter(t => {
+      const raw = t._raw || t;
+      return raw.type === 'income' && raw.is_recurring === true;
+    });
+    
+    const uniqueMap = new Map<string, any>();
+    
+    recurringIncomes.forEach(inc => {
+      const raw = inc._raw || inc;
+      const key = `${raw.note}_${raw.amount}_${raw.recurring_type}`;
+      
+      if (!uniqueMap.has(key)) {
+        uniqueMap.set(key, inc);
+      }
+    });
+    
+    const uniqueIncomes = Array.from(uniqueMap.values());
+    
+    console.log(`📊 Найдено регулярных доходов в базе: ${recurringIncomes.length}`);
+    console.log(`📊 Уникальных регулярных доходов: ${uniqueIncomes.length}`);
+    
+    uniqueIncomes.forEach(inc => {
+      const raw = inc._raw || inc;
+      console.log(`  - ${new Date(raw.date).toISOString().split('T')[0]}: ${raw.amount} ₽ - ${raw.note} (${raw.recurring_type})`);
+    });
+    
+    return uniqueIncomes;
+  }
 
   /**
    * Рассчитывает следующую дату повторения на основе периодичности
-   * @param originalDate - исходная дата транзакции
-   * @param recurringType - тип периодичности ('monthly', 'weekly', 'yearly')
-   * @param fromDate - дата, начиная с которой ищем следующее повторение
-   * @returns следующая дата повторения или null
    */
   private getNextRecurringDate(
     originalDate: Date,
@@ -146,7 +141,6 @@ private async getAllRecurringIncomes(): Promise<any[]> {
   ): Date | null {
     let nextDate = new Date(originalDate);
     
-    // Находим следующую дату после fromDate
     while (nextDate <= fromDate) {
       switch (recurringType) {
         case 'monthly':
@@ -168,10 +162,6 @@ private async getAllRecurringIncomes(): Promise<any[]> {
 
   /**
    * Рассчитывает все повторения регулярного дохода в заданном периоде
-   * @param income - регулярный доход
-   * @param startDate - начало периода (обычно текущая дата)
-   * @param endDate - конец периода (обычно конец месяца)
-   * @returns массив будущих поступлений
    */
   private calculateRecurrencesInPeriod(
     income: any,
@@ -182,17 +172,14 @@ private async getAllRecurringIncomes(): Promise<any[]> {
     const recurringType = raw.recurring_type as 'monthly' | 'weekly' | 'yearly';
     
     if (!recurringType) {
-      console.log(`⚠️ Доход "${raw.note}" не имеет recurring_type, пропускаем`);
       return [];
     }
     
     const originalDate = new Date(raw.date);
     const result: FutureIncome[] = [];
     
-    // Находим первое повторение после startDate
     let nextDate = this.getNextRecurringDate(originalDate, recurringType, startDate);
     
-    // Добавляем все повторения в пределах периода
     while (nextDate && nextDate <= endDate) {
       result.push({
         date: nextDate,
@@ -203,7 +190,6 @@ private async getAllRecurringIncomes(): Promise<any[]> {
         originalDate: originalDate
       });
       
-      // Рассчитываем следующую дату
       switch (recurringType) {
         case 'monthly':
           nextDate = addMonths(nextDate, 1);
@@ -223,104 +209,90 @@ private async getAllRecurringIncomes(): Promise<any[]> {
   /**
    * Получает будущие регулярные доходы до конца текущего месяца
    */
-/**
- * Получает будущие регулярные доходы до конца текущего месяца
- */
-private async getFutureRecurringIncomesForCurrentMonth(): Promise<FutureIncome[]> {
-  const now = new Date();
-  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-  
-  console.log('📅 Расчет будущих регулярных доходов:');
-  console.log('  Текущая дата:', now.toISOString().split('T')[0]);
-  console.log('  Конец месяца:', endOfMonth.toISOString().split('T')[0]);
-  
-  const recurringIncomes = await this.getAllRecurringIncomes();
-  
-  // Используем Map для дедупликации по оригинальной дате и заметке
-  const uniqueIncomes = new Map<string, any>();
-  
-  // Сначала дедуплицируем регулярные доходы по уникальному ключу
-  for (const income of recurringIncomes) {
-    const raw = income._raw || income;
-    // Создаем уникальный ключ на основе заметки, суммы и типа периодичности
-    const key = `${raw.note}_${raw.amount}_${raw.recurring_type}`;
+  private async getFutureRecurringIncomesForCurrentMonth(): Promise<FutureIncome[]> {
+    const now = new Date();
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
     
-    if (!uniqueIncomes.has(key)) {
-      uniqueIncomes.set(key, {
-        id: raw.id,
-        note: raw.note,
-        amount: raw.amount,
-        recurringType: raw.recurring_type,
-        originalDate: new Date(raw.date),
-      });
-    }
-  }
-  
-  console.log(`📊 Уникальных регулярных доходов: ${uniqueIncomes.size}`);
-  
-  // Группируем будущие поступления по дате
-  const incomesByDate = new Map<string, FutureIncome>();
-  
-  for (const income of uniqueIncomes.values()) {
-    const recurringType = income.recurringType;
-    if (!recurringType) continue;
+    console.log('📅 Расчет будущих регулярных доходов:');
+    console.log('  Текущая дата:', now.toISOString().split('T')[0]);
+    console.log('  Конец месяца:', endOfMonth.toISOString().split('T')[0]);
     
-    const originalDate = income.originalDate;
+    const recurringIncomes = await this.getAllRecurringIncomes();
+    const uniqueIncomes = new Map<string, any>();
     
-    // Находим следующую дату повторения
-    let nextDate = this.getNextRecurringDate(originalDate, recurringType, now);
-    
-    // Добавляем все повторения в пределах месяца
-    while (nextDate && nextDate <= endOfMonth) {
-      const dateKey = nextDate.toISOString().split('T')[0];
+    for (const income of recurringIncomes) {
+      const raw = income._raw || income;
+      const key = `${raw.note}_${raw.amount}_${raw.recurring_type}`;
       
-      if (incomesByDate.has(dateKey)) {
-        const existing = incomesByDate.get(dateKey)!;
-        existing.amount += income.amount;
-        // Добавляем заметку только если она еще не добавлена
-        if (!existing.note.includes(income.note)) {
-          existing.note = `${existing.note}, ${income.note}`;
-        }
-      } else {
-        incomesByDate.set(dateKey, {
-          date: nextDate,
-          amount: income.amount,
-          note: income.note,
-          isRecurring: true,
-          recurringType: recurringType,
-          originalDate: originalDate
+      if (!uniqueIncomes.has(key)) {
+        uniqueIncomes.set(key, {
+          id: raw.id,
+          note: raw.note,
+          amount: raw.amount,
+          recurringType: raw.recurring_type,
+          originalDate: new Date(raw.date),
         });
       }
+    }
+    
+    console.log(`📊 Уникальных регулярных доходов: ${uniqueIncomes.size}`);
+    
+    const incomesByDate = new Map<string, FutureIncome>();
+    
+    for (const income of uniqueIncomes.values()) {
+      const recurringType = income.recurringType;
+      if (!recurringType) continue;
       
-      // Рассчитываем следующую дату
-      switch (recurringType) {
-        case 'monthly':
-          nextDate = addMonths(nextDate, 1);
-          break;
-        case 'weekly':
-          nextDate = addWeeks(nextDate, 1);
-          break;
-        case 'yearly':
-          nextDate = addYears(nextDate, 1);
-          break;
+      const originalDate = income.originalDate;
+      let nextDate = this.getNextRecurringDate(originalDate, recurringType, now);
+      
+      while (nextDate && nextDate <= endOfMonth) {
+        const dateKey = nextDate.toISOString().split('T')[0];
+        
+        if (incomesByDate.has(dateKey)) {
+          const existing = incomesByDate.get(dateKey)!;
+          existing.amount += income.amount;
+          if (!existing.note.includes(income.note)) {
+            existing.note = `${existing.note}, ${income.note}`;
+          }
+        } else {
+          incomesByDate.set(dateKey, {
+            date: nextDate,
+            amount: income.amount,
+            note: income.note,
+            isRecurring: true,
+            recurringType: recurringType,
+            originalDate: originalDate
+          });
+        }
+        
+        switch (recurringType) {
+          case 'monthly':
+            nextDate = addMonths(nextDate, 1);
+            break;
+          case 'weekly':
+            nextDate = addWeeks(nextDate, 1);
+            break;
+          case 'yearly':
+            nextDate = addYears(nextDate, 1);
+            break;
+        }
       }
     }
+    
+    const result = Array.from(incomesByDate.values()).sort(
+      (a, b) => a.date.getTime() - b.date.getTime()
+    );
+    
+    const totalRegularIncome = result.reduce((sum, inc) => sum + inc.amount, 0);
+    console.log(`\n📊 ИТОГО будущих РЕГУЛЯРНЫХ доходов в этом месяце: ${result.length} поступлений на сумму ${totalRegularIncome.toLocaleString()} ₽`);
+    
+    result.forEach(inc => {
+      console.log(`  - ${inc.date.toISOString().split('T')[0]}: ${inc.amount.toLocaleString()} ₽ - ${inc.note}`);
+    });
+    
+    return result;
   }
-  
-  const result = Array.from(incomesByDate.values()).sort(
-    (a, b) => a.date.getTime() - b.date.getTime()
-  );
-  
-  const totalRegularIncome = result.reduce((sum, inc) => sum + inc.amount, 0);
-  console.log(`\n📊 ИТОГО будущих РЕГУЛЯРНЫХ доходов в этом месяце: ${result.length} поступлений на сумму ${totalRegularIncome.toLocaleString()} ₽`);
-  
-  // Логируем результат для отладки
-  result.forEach(inc => {
-    console.log(`  - ${inc.date.toISOString().split('T')[0]}: ${inc.amount.toLocaleString()} ₽ - ${inc.note}`);
-  });
-  
-  return result;
-}
 
   /**
    * Получает будущие разовые доходы до конца текущего месяца
@@ -383,13 +355,9 @@ private async getFutureRecurringIncomesForCurrentMonth(): Promise<FutureIncome[]
     console.log(`Период: ${now.toISOString().split('T')[0]} - ${endOfMonth.toISOString().split('T')[0]}`);
     console.log('========================================\n');
     
-    // Получаем будущие регулярные доходы до конца месяца
     const regularIncomes = await this.getFutureRecurringIncomesForCurrentMonth();
-    
-    // Получаем разовые доходы для информации
     const oneTimeIncomes = await this.getFutureOneTimeIncomesForCurrentMonth();
     
-    // Суммируем регулярные доходы (это и есть ОЖИДАЕМЫЙ ДОХОД)
     let regularIncome = 0;
     const upcomingIncomes: ExpectedIncomeDetails['upcomingIncomes'] = [];
     
@@ -404,7 +372,6 @@ private async getFutureRecurringIncomesForCurrentMonth(): Promise<FutureIncome[]
       });
     });
     
-    // Суммируем разовые доходы (только для информации)
     let oneTimeIncome = 0;
     oneTimeIncomes.forEach(income => {
       oneTimeIncome += income.amount;
@@ -416,7 +383,6 @@ private async getFutureRecurringIncomesForCurrentMonth(): Promise<FutureIncome[]
       });
     });
     
-    // Рассчитываем среднемесячный регулярный доход за последние 6 месяцев
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(now.getMonth() - 6);
     
@@ -425,7 +391,6 @@ private async getFutureRecurringIncomesForCurrentMonth(): Promise<FutureIncome[]
       now.getTime()
     );
     
-    // Группируем только регулярные доходы по месяцам
     const monthlyRegularIncomes = new Map<string, number>();
     
     historyTransactions.forEach(t => {
@@ -456,7 +421,6 @@ private async getFutureRecurringIncomesForCurrentMonth(): Promise<FutureIncome[]
       }
     }
     
-    // Ожидаемый доход = ТОЛЬКО регулярные доходы в текущем месяце
     const total = regularIncome;
     
     console.log('\n========================================');
@@ -497,14 +461,12 @@ private async getFutureRecurringIncomesForCurrentMonth(): Promise<FutureIncome[]
   }
 
   /**
-   * Получает все будущие доходы для расчета лимитов и прогнозов
-   * (включает и регулярные, и разовые для более точного прогноза)
+   * Получает все будущие доходы для расчета прогнозов
    */
   private async getAllFutureIncomes(daysAhead: number = 60): Promise<FutureIncome[]> {
     const now = new Date();
     const futureDate = addDays(now, daysAhead);
     
-    // Для прогноза баланса используем ВСЕ доходы, включая разовые
     const regularIncomes = await this.getFutureRecurringIncomesForPeriod(now, futureDate);
     const oneTimeIncomes = await this.getFutureOneTimeIncomesForPeriod(now, futureDate);
     
@@ -515,40 +477,38 @@ private async getFutureRecurringIncomesForCurrentMonth(): Promise<FutureIncome[]
    * Получает будущие регулярные доходы для заданного периода
    */
   private async getFutureRecurringIncomesForPeriod(
-  startDate: Date,
-  endDate: Date
-): Promise<FutureIncome[]> {
-  const recurringIncomes = await this.getAllRecurringIncomes();
-  const futureIncomes: FutureIncome[] = [];
-  
-  // Ограничиваем период текущим месяцем
-  const monthEnd = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0);
-  const actualEndDate = endDate > monthEnd ? monthEnd : endDate;
-  
-  for (const income of recurringIncomes) {
-    const occurrences = this.calculateRecurrencesInPeriod(income, startDate, actualEndDate);
-    futureIncomes.push(...occurrences);
-  }
-  
-  // Группируем по датам
-  const incomesByDate = new Map<string, FutureIncome>();
-  
-  futureIncomes.forEach(income => {
-    const dateKey = income.date.toISOString().split('T')[0];
+    startDate: Date,
+    endDate: Date
+  ): Promise<FutureIncome[]> {
+    const recurringIncomes = await this.getAllRecurringIncomes();
+    const futureIncomes: FutureIncome[] = [];
     
-    if (incomesByDate.has(dateKey)) {
-      const existing = incomesByDate.get(dateKey)!;
-      existing.amount += income.amount;
-      existing.note += `, ${income.note}`;
-    } else {
-      incomesByDate.set(dateKey, income);
+    const monthEnd = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0);
+    const actualEndDate = endDate > monthEnd ? monthEnd : endDate;
+    
+    for (const income of recurringIncomes) {
+      const occurrences = this.calculateRecurrencesInPeriod(income, startDate, actualEndDate);
+      futureIncomes.push(...occurrences);
     }
-  });
-  
-  return Array.from(incomesByDate.values()).sort(
-    (a, b) => a.date.getTime() - b.date.getTime()
-  );
-}
+    
+    const incomesByDate = new Map<string, FutureIncome>();
+    
+    futureIncomes.forEach(income => {
+      const dateKey = income.date.toISOString().split('T')[0];
+      
+      if (incomesByDate.has(dateKey)) {
+        const existing = incomesByDate.get(dateKey)!;
+        existing.amount += income.amount;
+        existing.note += `, ${income.note}`;
+      } else {
+        incomesByDate.set(dateKey, income);
+      }
+    });
+    
+    return Array.from(incomesByDate.values()).sort(
+      (a, b) => a.date.getTime() - b.date.getTime()
+    );
+  }
 
   /**
    * Получает будущие разовые доходы для заданного периода
@@ -611,10 +571,9 @@ private async getFutureRecurringIncomesForCurrentMonth(): Promise<FutureIncome[]
       const currentDate = addDays(new Date(), day);
       currentDate.setHours(0, 0, 0, 0);
       
-      // Сначала вычитаем расходы за день
       balance -= avgDailySpending;
       days++;
-      // Затем добавляем доходы за этот день
+      
       while (incomeIndex < sortedIncomes.length && 
             isSameDay(sortedIncomes[incomeIndex].date, currentDate)) {
         balance += sortedIncomes[incomeIndex].amount;
@@ -628,13 +587,16 @@ private async getFutureRecurringIncomesForCurrentMonth(): Promise<FutureIncome[]
     return null;
   }
 
-/* Подсчет ежедневного рекомендуемого лимита */
+  /**
+   * Подсчет ежедневного рекомендуемого лимита (БЕЗ учета ожидаемых доходов)
+   * Лимит рассчитывается только на основе текущего баланса и оставшихся дней
+   */
   private async calculateRecommendedDailyLimit(
     currentBalance: number,
     futureIncomes: FutureIncome[],
     avgDailySpending: number,
     remainingDays: number
-  ): Promise<{ limit: number; monthlyBudget: MonthlyBudget }> {
+  ): Promise<{ limit: number; monthlyBudget: MonthlyBudget; rawLimit: number }> {
     
     const totalFutureIncome = futureIncomes.reduce((sum, inc) => sum + inc.amount, 0);
     const totalAvailable = currentBalance + totalFutureIncome;
@@ -642,6 +604,7 @@ private async getFutureRecurringIncomesForCurrentMonth(): Promise<FutureIncome[]
     if (remainingDays <= 0 || totalAvailable <= 0) {
       return {
         limit: 100,
+        rawLimit: 100,
         monthlyBudget: {
           totalAvailable: Math.max(0, totalAvailable),
           dailyBudget: 100,
@@ -652,46 +615,54 @@ private async getFutureRecurringIncomesForCurrentMonth(): Promise<FutureIncome[]
       };
     }
     
-    // 1. Базовый лимит (строгий) - сколько можно тратить, чтобы не уйти в минус
-    const strictLimit = totalAvailable / remainingDays;
+    // 1. Базовый консервативный лимит (только на основе текущего баланса)
+    // Это максимальная сумма, которую можно тратить в день, чтобы денег хватило до конца месяца
+    const conservativeLimit = totalAvailable / remainingDays;
     
     // 2. Исторический лимит - ваши привычные траты × 0.8 (80% от средних)
     const historicalLimit = avgDailySpending * 0.8;
     
-    // 3. Простая формула (как в инфо модалке)
-    let recommendedLimit = (strictLimit * 0.3) + (historicalLimit * 0.7);
+    // 3. Комбинированный лимит (консервативный + исторический)
+    let rawRecommendedLimit = (conservativeLimit * 0.6) + (historicalLimit * 0.4);
     
-    // 4. Минимальный лимит (защита от слишком низких значений)
+    // 4. Ограничение: лимит не может быть выше консервативного
+    // Это гарантирует, что денег хватит до конца месяца
+    if (rawRecommendedLimit > conservativeLimit) {
+      rawRecommendedLimit = conservativeLimit;
+    }
+    
+    // 5. Минимальный лимит (защита от слишком низких значений)
     const minLimit = 100;
-    recommendedLimit = Math.max(minLimit, recommendedLimit);
+    rawRecommendedLimit = Math.max(minLimit, rawRecommendedLimit);
     
-    // 5. Округление для удобства
-    // if (recommendedLimit > 1000) {
-    //   recommendedLimit = Math.round(recommendedLimit / 100) * 100;
-    // } else if (recommendedLimit > 500) {
-    //   recommendedLimit = Math.round(recommendedLimit / 50) * 50;
-    // } else {
-    //   recommendedLimit = Math.round(recommendedLimit / 10) * 10;
-    // }
+    // 6. Округление для отображения
+    const displayLimit = Math.round(rawRecommendedLimit);
+    
+    // Проверка: если соблюдать лимит, денег должно хватить
+    const totalNeeded = displayLimit * remainingDays;
+    const willBeEnough = totalNeeded <= totalAvailable;
+    
+    console.log('📊 Расчет консервативного лимита (без учета будущих доходов):', {
+      currentBalance,
+      remainingDays,
+      conservativeLimit: Math.round(conservativeLimit),
+      historicalLimit: Math.round(historicalLimit),
+      rawRecommendedLimit: Math.round(rawRecommendedLimit),
+      displayLimit,
+      totalNeeded: `${displayLimit} × ${remainingDays} = ${totalNeeded}`,
+      willBeEnough: willBeEnough ? '✅ Денег хватит' : '⚠️ Денег не хватит',
+      формула: `${Math.round(conservativeLimit)} × 0.6 + ${Math.round(historicalLimit)} × 0.4 = ${Math.round(rawRecommendedLimit)}`
+    });
     
     const monthlyBudget: MonthlyBudget = {
       totalAvailable: totalAvailable,
-      dailyBudget: recommendedLimit,
-      weeklyBudget: recommendedLimit * 7,
-      recommendedLimit: recommendedLimit,
+      dailyBudget: displayLimit,
+      weeklyBudget: displayLimit * 7,
+      recommendedLimit: displayLimit,
       safetyBuffer: totalAvailable * 0.1
     };
     
-    console.log('📊 Расчет рекомендуемого лимита:', {
-      totalAvailable,
-      remainingDays,
-      strictLimit: Math.round(strictLimit),
-      historicalLimit: Math.round(historicalLimit),
-      recommendedLimit,
-      формула: `${Math.round(strictLimit)} × 0.3 + ${Math.round(historicalLimit)} × 0.7 = ${Math.round(recommendedLimit)}`
-    });
-    
-    return { limit: recommendedLimit, monthlyBudget };
+    return { limit: displayLimit, rawLimit: rawRecommendedLimit, monthlyBudget };
   }
 
   private async calculatePredictedBalance(
@@ -699,7 +670,8 @@ private async getFutureRecurringIncomesForCurrentMonth(): Promise<FutureIncome[]
     futureIncomes: FutureIncome[],
     avgDailySpending: number,
     remainingDays: number,
-    recommendedLimit?: number
+    recommendedLimit?: number,
+    rawRecommendedLimit?: number
   ): Promise<{ 
     optimistic: number; 
     pessimistic: number; 
@@ -776,8 +748,9 @@ private async getFutureRecurringIncomesForCurrentMonth(): Promise<FutureIncome[]
     
     let recommendedBalance = currentBalance;
     incomeIndex = 0;
-    const recommendedExpense = recommendedLimit || avgDailySpending;
-    
+    const recommendedExpense = rawRecommendedLimit || recommendedLimit || avgDailySpending;
+        console.log('777', recommendedBalance)
+
     for (let day = 1; day <= remainingDays; day++) {
       const currentDate = addDays(new Date(), day);
       currentDate.setHours(0, 0, 0, 0);
@@ -790,7 +763,8 @@ private async getFutureRecurringIncomesForCurrentMonth(): Promise<FutureIncome[]
       }
       
       recommendedBalance += dailyIncome;
-      recommendedBalance -= recommendedExpense;
+      recommendedBalance -= recommendedExpense; 
+
     }
     
     return {
@@ -852,10 +826,8 @@ private async getFutureRecurringIncomesForCurrentMonth(): Promise<FutureIncome[]
   }
 
   async predictCashFlowGaps(): Promise<CashFlowPrediction> {
-      const now = new Date();
-    const currentBalance = await transactionService.getBalanceUntilDate(
-      now.getTime(),
-    );
+    const now = new Date();
+    const currentBalance = await transactionService.getBalanceUntilDate(now.getTime());
     const avgDailySpending = await this.getAverageDailySpending(30);
     
     // Получаем ВСЕ будущие доходы (для прогноза баланса)
@@ -885,95 +857,98 @@ private async getFutureRecurringIncomesForCurrentMonth(): Promise<FutureIncome[]
     
     const daysUntilNegative = this.calculateDaysUntilNegative(
       currentBalance,
-      regularIncomesThisMonth, // Используем только регулярные доходы в текущем месяце
+      regularIncomesThisMonth,
       avgDailySpending,
       remainingDays
     );
-      
-      const { limit: recommendedDailyLimit, monthlyBudget } = await this.calculateRecommendedDailyLimit(
-        currentBalance,
-        allFutureIncomes,
-        avgDailySpending,
-        remainingDays
-      );
-      const balanceForecast = await this.calculatePredictedBalance(
-        currentBalance,
-        allFutureIncomes,
-        avgDailySpending,
-        remainingDays,
-        recommendedDailyLimit
-      );
-      
-      let riskLevel: 'low' | 'medium' | 'high' = 'low';
-      
-      if (currentBalance < 0) {
-        riskLevel = 'high';
-      } else if (daysUntilNegative !== null) {
-        if (daysUntilNegative <= 7) riskLevel = 'high';
-        else if (daysUntilNegative <= 14) riskLevel = 'medium';
-        else riskLevel = 'low';
-      } else {
-        if (balanceForecast.recommended < 0) {
-          riskLevel = 'high';
-        } else if (balanceForecast.recommended < (monthlyBudget?.safetyBuffer || 0)) {
-          riskLevel = 'medium';
-        } else if (avgDailySpending > recommendedDailyLimit) {
-          riskLevel = 'medium';
-        } else {
-          riskLevel = 'low';
-        }
-      }
-      
-      let savingsRecommendation = '';
-      const overspend = avgDailySpending - recommendedDailyLimit;
-      
+    
+    // Для расчета лимита НЕ используем будущие доходы
+    const { limit: recommendedDailyLimit, rawLimit, monthlyBudget } = await this.calculateRecommendedDailyLimit(
+      currentBalance,
+      allFutureIncomes,
+      avgDailySpending,
+      remainingDays
+    );
+    
+    const balanceForecast = await this.calculatePredictedBalance(
+      currentBalance,
+      allFutureIncomes,
+      avgDailySpending,
+      remainingDays,
+      recommendedDailyLimit,
+      rawLimit
+    );
+    
+    let riskLevel: 'low' | 'medium' | 'high' = 'low';
+    
+    if (currentBalance < 0) {
+      riskLevel = 'high';
+    } else if (daysUntilNegative !== null) {
+      if (daysUntilNegative <= 7) riskLevel = 'high';
+      else if (daysUntilNegative <= 14) riskLevel = 'medium';
+      else riskLevel = 'low';
+    } else {
       if (balanceForecast.recommended < 0) {
-        const neededSavings = Math.abs(balanceForecast.recommended);
-        const dailySavings = Math.ceil(neededSavings / remainingDays);
-        savingsRecommendation = `⚠️ Для достижения нулевого баланса необходимо экономить ${dailySavings} ₽ в день. Рекомендуемый лимит: ${recommendedDailyLimit} ₽/день.`;
-      } else if (overspend > 0) {
-        savingsRecommendation = `⚠️ Ваши средние траты (${Math.round(avgDailySpending)} ₽) превышают рекомендуемый лимит на ${Math.round(overspend)} ₽ в день. Постарайтесь сократить расходы, чтобы улучшить финансовое положение.`;
+        riskLevel = 'high';
       } else if (balanceForecast.recommended < (monthlyBudget?.safetyBuffer || 0)) {
-        savingsRecommendation = `💡 Ваш буфер безопасности составляет ${Math.round(balanceForecast.recommended)} ₽. Рекомендуем придерживаться лимита ${recommendedDailyLimit} ₽/день для создания подушки безопасности.`;
+        riskLevel = 'medium';
+      } else if (avgDailySpending > recommendedDailyLimit) {
+        riskLevel = 'medium';
       } else {
-        savingsRecommendation = `✅ Отлично! При соблюдении лимита ${recommendedDailyLimit} ₽/день вы сможете накопить ${Math.round(balanceForecast.recommended)} ₽ к концу месяца.`;
+        riskLevel = 'low';
       }
-      
-      const dailyBreakdown = await this.calculateDailyBreakdown(
-        currentBalance,
-        allFutureIncomes,
-        avgDailySpending,
-        recommendedDailyLimit,
-        Math.min(14, remainingDays),
-      );
-      
-      console.log('\n========================================');
-      console.log('📊 ИТОГОВЫЙ ПРОГНОЗ');
-      console.log('========================================');
-      console.log(`💰 Текущий баланс: ${currentBalance.toLocaleString()} ₽`);
-      console.log(`📈 Ожидаемый доход (регулярный): ${expectedIncomeDetails.total.toLocaleString()} ₽`);
-      console.log(`🎲 Разовые доходы: ${oneTimeIncomeTotal.toLocaleString()} ₽ (не учитываются)`);
-      console.log(`📉 Средние траты: ${avgDailySpending.toLocaleString()} ₽/день`);
-      console.log(`⚡ Рекомендуемый лимит: ${recommendedDailyLimit.toLocaleString()} ₽/день`);
-      console.log(`🎯 Прогнозируемый баланс: ${balanceForecast.recommended.toLocaleString()} ₽`);
-      console.log(`📅 Дней до отрицательного: ${daysUntilNegative || '> 60'}`);
-      console.log(`⚠️ Уровень риска: ${riskLevel === 'high' ? 'Высокий' : riskLevel === 'medium' ? 'Средний' : 'Низкий'}`);
-      console.log('========================================\n');
-      
-      return {
-        predictedBalance: balanceForecast.recommended,
-        daysUntilNegative,
-        recommendedDailyLimit,
-        riskLevel,
-        dailyBreakdown,
-        futureIncomes: allFutureIncomes,
-        totalFutureIncome,
-        monthlyBudget,
-        savingsRecommendation,
-        expectedIncome: expectedIncomeDetails.total,
-        expectedIncomeDetails,
-        oneTimeIncomeTotal
-      };
+    }
+    
+    let savingsRecommendation = '';
+    const overspend = avgDailySpending - recommendedDailyLimit;
+    
+    if (balanceForecast.recommended < 0) {
+      const neededSavings = Math.abs(balanceForecast.recommended);
+      const dailySavings = Math.ceil(neededSavings / remainingDays);
+      savingsRecommendation = `⚠️ Для достижения нулевого баланса необходимо экономить ${dailySavings} ₽ в день. Рекомендуемый лимит: ${recommendedDailyLimit} ₽/день.`;
+    } else if (overspend > 0) {
+      savingsRecommendation = `⚠️ Ваши средние траты (${Math.round(avgDailySpending)} ₽) превышают рекомендуемый лимит на ${Math.round(overspend)} ₽ в день. Постарайтесь сократить расходы, чтобы улучшить финансовое положение.`;
+    } else if (balanceForecast.recommended < (monthlyBudget?.safetyBuffer || 0)) {
+      savingsRecommendation = `💡 Ваш буфер безопасности составляет ${Math.round(balanceForecast.recommended)} ₽. Рекомендуем придерживаться лимита ${recommendedDailyLimit} ₽/день для создания подушки безопасности.`;
+    } else {
+      savingsRecommendation = `✅ Отлично! При соблюдении лимита ${recommendedDailyLimit} ₽/день вы сможете накопить ${Math.round(balanceForecast.recommended)} ₽ к концу месяца.`;
+    }
+    
+    const dailyBreakdown = await this.calculateDailyBreakdown(
+      currentBalance,
+      allFutureIncomes,
+      avgDailySpending,
+      recommendedDailyLimit,
+      Math.min(14, remainingDays),
+    );
+    
+    console.log('\n========================================');
+    console.log('📊 ИТОГОВЫЙ ПРОГНОЗ');
+    console.log('========================================');
+    console.log(`💰 Текущий баланс: ${currentBalance.toLocaleString()} ₽`);
+    console.log(`📈 Ожидаемый доход (регулярный): ${expectedIncomeDetails.total.toLocaleString()} ₽`);
+    console.log(`🎲 Разовые доходы: ${oneTimeIncomeTotal.toLocaleString()} ₽ (не учитываются в прогнозе)`);
+    console.log(`📉 Средние траты: ${avgDailySpending.toLocaleString()} ₽/день`);
+    console.log(`⚡ Рекомендуемый лимит: ${recommendedDailyLimit.toLocaleString()} ₽/день`);
+    console.log(`🎯 Прогнозируемый баланс: ${balanceForecast.recommended.toLocaleString()} ₽`);
+    console.log(`📅 Дней до отрицательного: ${daysUntilNegative || '> 60'}`);
+    console.log(`⚠️ Уровень риска: ${riskLevel === 'high' ? 'Высокий' : riskLevel === 'medium' ? 'Средний' : 'Низкий'}`);
+    console.log('========================================\n');
+    
+    return {
+      predictedBalance: balanceForecast.recommended,
+      daysUntilNegative,
+      recommendedDailyLimit,
+      riskLevel,
+      dailyBreakdown,
+      futureIncomes: allFutureIncomes,
+      totalFutureIncome,
+      monthlyBudget,
+      savingsRecommendation,
+      expectedIncome: expectedIncomeDetails.total,
+      expectedIncomeDetails,
+      oneTimeIncomeTotal
+    };
   }
 
   async calculateOptimalDailyLimit(
