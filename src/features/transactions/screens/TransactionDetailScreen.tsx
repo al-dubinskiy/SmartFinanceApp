@@ -56,22 +56,21 @@ export const TransactionDetailScreen: React.FC<
     }
   };
 
-  console.log('fdsfsdf', transaction)
   const handleDelete = () => {
     Alert.alert(
-      'Delete Transaction',
-      'Are you sure you want to delete this transaction?',
+      'Удаление транзакции',
+      'Вы уверены, что хотите удалить эту транзакцию?',
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: 'Отмена', style: 'cancel' },
         {
-          text: 'Delete',
+          text: 'Удалить',
           style: 'destructive',
           onPress: async () => {
             try {
               await transactionService.deleteTransaction(transactionId);
               navigation.goBack();
             } catch (error) {
-              Alert.alert('Error', 'Failed to delete transaction');
+              Alert.alert('Ошибка', 'Не удалось удалить транзакцию');
             }
           },
         },
@@ -131,13 +130,13 @@ export const TransactionDetailScreen: React.FC<
       >
         <Icon name="alert-circle" size={64} color={colors.error} />
         <Text style={[styles.errorText, { color: colors.text.primary }]}>
-          Transaction not found
+          Транзакция не найдена
         </Text>
         <TouchableOpacity
           style={[styles.backButton, { backgroundColor: colors.primary }]}
           onPress={() => navigation.goBack()}
         >
-          <Text style={styles.backButtonText}>Go Back</Text>
+          <Text style={styles.backButtonText}>Назад</Text>
         </TouchableOpacity>
       </View>
     );
@@ -160,7 +159,7 @@ export const TransactionDetailScreen: React.FC<
           <Icon name="arrow-left" size={24} color={colors.text.primary} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text.primary }]}>
-          Transaction Details
+          Детали транзакции
         </Text>
         <View style={styles.headerActions}>
           <TouchableOpacity onPress={handleEdit} style={styles.headerAction}>
@@ -176,7 +175,7 @@ export const TransactionDetailScreen: React.FC<
         {/* Amount */}
         <View style={[styles.amountCard, { backgroundColor: colors.surface }]}>
           <Text style={[styles.amountLabel, { color: colors.text.secondary }]}>
-            Amount
+            Сумма
           </Text>
           <Text style={[styles.amount, { color: amountColor }]}>
             {amountPrefix}
@@ -203,10 +202,10 @@ export const TransactionDetailScreen: React.FC<
               <Text
                 style={[styles.infoLabel, { color: colors.text.secondary }]}
               >
-                Category
+                Категория
               </Text>
               <Text style={[styles.infoValue, { color: colors.text.primary }]}>
-                {category?.name || 'Unknown'}
+                {category?.name || 'Неизвестно'}
               </Text>
             </View>
           </View>
@@ -224,7 +223,7 @@ export const TransactionDetailScreen: React.FC<
               <Text
                 style={[styles.infoLabel, { color: colors.text.secondary }]}
               >
-                Recurring
+                Регулярный
               </Text>
               <Text style={[styles.infoValue, { color: colors.text.primary }]}>
                 {isRecurring ? 'Да' : 'Нет'}
@@ -258,7 +257,7 @@ export const TransactionDetailScreen: React.FC<
               <Text
                 style={[styles.infoLabel, { color: colors.text.secondary }]}
               >
-                Date
+                Дата
               </Text>
               <Text style={[styles.infoValue, { color: colors.text.primary }]}>
                 {formatDate(transaction.date, 'long')}
@@ -276,7 +275,7 @@ export const TransactionDetailScreen: React.FC<
                 <Text
                   style={[styles.infoLabel, { color: colors.text.secondary }]}
                 >
-                  Note
+                  Примечание
                 </Text>
                 <Text
                   style={[styles.infoValue, { color: colors.text.primary }]}
@@ -302,7 +301,7 @@ export const TransactionDetailScreen: React.FC<
               <Text
                 style={[styles.infoLabel, { color: colors.text.secondary }]}
               >
-                Type
+                Тип
               </Text>
               <Text
                 style={[
@@ -315,7 +314,7 @@ export const TransactionDetailScreen: React.FC<
                   },
                 ]}
               >
-                {transaction.type === 'income' ? 'Income' : 'Expense'}
+                {transaction.type === 'income' ? 'Доход' : 'Расход'}
               </Text>
             </View>
           </View>
@@ -333,7 +332,7 @@ export const TransactionDetailScreen: React.FC<
               <Text
                 style={[styles.infoLabel, { color: colors.text.secondary }]}
               >
-                Created
+                Создано
               </Text>
               <Text
                 style={[styles.infoValue, { color: colors.text.secondary }]}

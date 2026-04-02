@@ -33,7 +33,10 @@ import {
   eachMonthOfInterval,
   format,
 } from 'date-fns';
+import { ru } from 'date-fns/locale';
+
 import { useIsFocused } from '@react-navigation/native';
+import { capitalizeStr } from '../../../utils';
 
 interface PeriodStats {
   startDate: number;
@@ -130,89 +133,111 @@ export const AnalyticsScreen: React.FC<
     return { startDate: start.getTime(), endDate: end.getTime() };
   }, [selectedPeriod]);
 
-  const loadTrendData = useCallback(async () => {
-    const { startDate, endDate } = getDateRange();
+ const loadTrendData = useCallback(async () => {
+  const { startDate, endDate } = getDateRange();
 
-    if (selectedPeriod === 'week') {
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      const days = eachDayOfInterval({ start, end });
+  if (selectedPeriod === 'week') {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const days = eachDayOfInterval({ start, end });
 
-      const dailyData = await Promise.all(
-        days.map(async day => {
-          const dayStart = new Date(
-            day.getFullYear(),
-            day.getMonth(),
-            day.getDate(),
-          ).getTime();
-          const dayEnd = new Date(
-            day.getFullYear(),
-            day.getMonth(),
-            day.getDate(),
-            23,
-            59,
-            59,
-          ).getTime();
-          const statistics = await transactionService.getStatistics(
-            dayStart,
-            dayEnd,
-          );
-          return {
-            label: format(day, 'EEE'),
-            value: statistics.expense,
-          };
-        }),
+    const dailyData = await Promise.all(
+      days.map(async day => {
+        const dayStart = new Date(
+          day.getFullYear(),
+          day.getMonth(),
+          day.getDate(),
+        ).getTime();
+        const dayEnd = new Date(
+          day.getFullYear(),
+          day.getMonth(),
+          day.getDate(),
+          23,
+          59,
+          59,
+        ).getTime();
+        const statistics = await transactionService.getStatistics(
+          dayStart,
+          dayEnd,
+        );
+        return {
+          shortLabel: capitalizeStr(format(day, 'EEE', { locale: ru })),
+          label: capitalizeStr(format(day, 'EEEE', { locale: ru })),
+          value: statistics.totalExpense,
+        };
+      }),
+    );
+
+    setTrendData(dailyData);
+  } else if (selectedPeriod === 'month') {
+    // Исправлено: используем startDate для определения начала месяца
+    const monthStartDate = new Date(startDate);
+    const monthEndDate = new Date(endDate);
+    
+    const weeks = ['Неделя 1', 'Неделя 2', 'Неделя 3', 'Неделя 4', 'Неделя 5'];
+    const weekData = [];
+    
+    // Получаем первый день месяца
+    const firstDayOfMonth = new Date(monthStartDate.getFullYear(), monthStartDate.getMonth(), 1);
+    const lastDayOfMonth = new Date(monthStartDate.getFullYear(), monthStartDate.getMonth() + 1, 0);
+    
+    // Разбиваем месяц на недели
+    let weekStart = new Date(firstDayOfMonth);
+    let weekIndex = 0;
+    
+    while (weekStart <= lastDayOfMonth && weekIndex < 5) {
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6);
+      
+      // Корректируем конец недели, чтобы не выходить за пределы месяца
+      const actualWeekEnd = weekEnd > lastDayOfMonth ? lastDayOfMonth : weekEnd;
+      
+      // Получаем статистику за неделю
+      const statistics = await transactionService.getStatistics(
+        weekStart.getTime(),
+        actualWeekEnd.getTime(),
       );
-
-      setTrendData(dailyData);
-    } else if (selectedPeriod === 'month') {
-      const weeks = ['Нед 1', 'Нед 2', 'Нед 3', 'Нед 4'];
-      const now = new Date();
-      const monthStart = startOfMonth(now);
-      const weekData = [];
-
-      for (let i = 0; i < 4; i++) {
-        const weekStart = new Date(monthStart);
-        weekStart.setDate(monthStart.getDate() + i * 7);
-        const weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekStart.getDate() + 6);
-
-        if (weekStart <= endDate) {
-          const statistics = await transactionService.getStatistics(
-            weekStart.getTime(),
-            weekEnd.getTime(),
-          );
-          weekData.push({
-            label: weeks[i],
-            value: statistics.expense,
-          });
-        }
-      }
-
-      setTrendData(weekData);
-    } else if (selectedPeriod === 'year') {
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      const months = eachMonthOfInterval({ start, end });
-
-      const monthlyData = await Promise.all(
-        months.map(async month => {
-          const monthStart = startOfMonth(month).getTime();
-          const monthEnd = endOfMonth(month).getTime();
-          const statistics = await transactionService.getStatistics(
-            monthStart,
-            monthEnd,
-          );
-          return {
-            label: format(month, 'MMM'),
-            value: statistics.expense,
-          };
-        }),
-      );
-
-      setTrendData(monthlyData);
+      
+      weekData.push({
+        shortLabel: capitalizeStr(weeks[weekIndex].split(' ')[0].slice(3) + " " + weeks[weekIndex].split(' ')[1]),
+        label: weeks[weekIndex],
+        value: statistics.totalExpense,
+      });
+      
+      // Переходим к следующей неделе
+      weekStart = new Date(weekEnd);
+      weekStart.setDate(weekEnd.getDate() + 1);
+      weekIndex++;
     }
-  }, [selectedPeriod, getDateRange]);
+    
+    console.log('📊 Данные для графика (недели):', weekData);
+    setTrendData(weekData);
+    
+  } else if (selectedPeriod === 'year') {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const months = eachMonthOfInterval({ start, end });
+
+    const monthlyData = await Promise.all(
+      months.map(async month => {
+        const monthStart = startOfMonth(month).getTime();
+        
+        const monthEnd = endOfMonth(month).getTime();
+        const statistics = await transactionService.getStatistics(
+          monthStart,
+          monthEnd,
+        );
+        return {
+          shortLabel: capitalizeStr(format(month, 'MMM', { locale: ru })),
+          label: capitalizeStr(format(month, 'MMMM', { locale: ru })).replace('я', "ь"),
+          value: statistics.totalExpense,
+        };
+      }),
+    );
+
+    setTrendData(monthlyData);
+  }
+}, [selectedPeriod, getDateRange]);
 
   const loadAnalytics = useCallback(async () => {
     try {
@@ -605,10 +630,7 @@ ABC-анализ — это метод классификации расходо
 
         {/* Expense Trend Bar Chart */}
         <BarChart
-          data={trendData.map(item => ({
-            value: item.value,
-            label: item.label,
-          }))}
+          data={trendData}
           title="Динамика расходов"
           currency="RUB"
         />

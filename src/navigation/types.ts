@@ -30,6 +30,7 @@ export type RootStackParamList = {
   Main: NavigatorScreenParams<MainTabParamList>;
   AddTransactionModal: undefined; // Модальное окно для добавления транзакции
   SetupPin: undefined; // Модальное окно для добавления транзакции
+  AllTransactions: { transactions: any[] };
   TransactionDetail: { transactionId: string };
   EditTransaction: { transactionId: string }; // Добавляем
   Categories: undefined; // Добавляем

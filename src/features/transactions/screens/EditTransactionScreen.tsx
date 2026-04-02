@@ -19,6 +19,7 @@ import transactionService from '../../../core/services/transaction.service';
 import categoryService from '../../../core/services/category.service';
 import { CategorySelector } from '../components/CategorySelector';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface EditTransactionScreenProps {
   navigation: any;
@@ -50,10 +51,12 @@ export const EditTransactionScreen: React.FC<EditTransactionScreenProps> = ({
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  
+
   // Состояния для регулярных транзакций
   const [isRecurring, setIsRecurring] = useState(false);
-  const [recurringType, setRecurringType] = useState<'monthly' | 'weekly' | 'yearly'>('monthly');
+  const [recurringType, setRecurringType] = useState<
+    'monthly' | 'weekly' | 'yearly'
+  >('monthly');
 
   useEffect(() => {
     loadTransaction();
@@ -90,7 +93,9 @@ export const EditTransactionScreen: React.FC<EditTransactionScreenProps> = ({
 
   const loadCategories = async () => {
     try {
-      const cats = await categoryService.getCategoriesByTypeWithTree(transactionType);
+      const cats = await categoryService.getCategoriesByTypeWithTree(
+        transactionType,
+      );
       setCategories(cats);
 
       if (selectedCategoryId) {
@@ -135,7 +140,7 @@ export const EditTransactionScreen: React.FC<EditTransactionScreenProps> = ({
 
   const handleSave = async () => {
     const numericAmount = getNumericAmount();
-    
+
     if (numericAmount <= 0) {
       Alert.alert('Ошибка', 'Введите корректную сумму');
       return;
@@ -152,8 +157,8 @@ export const EditTransactionScreen: React.FC<EditTransactionScreenProps> = ({
         'Это регулярный доход. Он будет автоматически добавляться по расписанию. Продолжить?',
         [
           { text: 'Отмена', style: 'cancel' },
-          { text: 'Продолжить', onPress: () => saveTransaction(numericAmount) }
-        ]
+          { text: 'Продолжить', onPress: () => saveTransaction(numericAmount) },
+        ],
       );
     } else {
       saveTransaction(numericAmount);
@@ -170,7 +175,8 @@ export const EditTransactionScreen: React.FC<EditTransactionScreenProps> = ({
         note: note.trim() || undefined,
         date: date.getTime(),
         isRecurring: isRecurring && transactionType === 'income',
-        recurringType: isRecurring && transactionType === 'income' ? recurringType : null,
+        recurringType:
+          isRecurring && transactionType === 'income' ? recurringType : null,
       });
 
       navigation.goBack();
@@ -226,328 +232,366 @@ export const EditTransactionScreen: React.FC<EditTransactionScreenProps> = ({
   const numericAmount = getNumericAmount();
 
   return (
-    <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
-    >
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: colors.surface }]}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backIcon}
-        >
-          <Icon name="arrow-left" size={24} color={colors.text.primary} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text.primary }]}>
-          Редактирование транзакции
-        </Text>
-        <TouchableOpacity onPress={handleDelete} style={styles.deleteIcon}>
-          <Icon name="delete" size={24} color={colors.error} />
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView
-        style={styles.content}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
+    <SafeAreaView style={{ flex: 1 }}>
+      <KeyboardAvoidingView
+        style={[styles.container, { backgroundColor: colors.background }]}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
       >
-        {/* Type Selector */}
-        <View
-          style={[styles.typeSelector, { backgroundColor: colors.surface }]}
-        >
+        {/* Header */}
+        <View style={[styles.header, { backgroundColor: colors.surface }]}>
           <TouchableOpacity
-            style={[
-              styles.typeButton,
-              transactionType === 'expense' && {
-                backgroundColor: colors.error + '20',
-              },
-            ]}
-            onPress={() => handleTypeChange('expense')}
+            onPress={() => navigation.goBack()}
+            style={styles.backIcon}
           >
-            <Icon
-              name="arrow-down"
-              size={20}
-              color={
-                transactionType === 'expense'
-                  ? colors.error
-                  : colors.text.secondary
-              }
-            />
-            <Text
-              style={[
-                styles.typeText,
-                {
-                  color:
-                    transactionType === 'expense'
-                      ? colors.error
-                      : colors.text.secondary,
-                },
-              ]}
-            >
-              Расход
-            </Text>
+            <Icon name="arrow-left" size={24} color={colors.text.primary} />
           </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.typeButton,
-              transactionType === 'income' && {
-                backgroundColor: colors.success + '20',
-              },
-            ]}
-            onPress={() => handleTypeChange('income')}
-          >
-            <Icon
-              name="arrow-up"
-              size={20}
-              color={
-                transactionType === 'income'
-                  ? colors.success
-                  : colors.text.secondary
-              }
-            />
-            <Text
-              style={[
-                styles.typeText,
-                {
-                  color:
-                    transactionType === 'income'
-                      ? colors.success
-                      : colors.text.secondary,
-                },
-              ]}
-            >
-              Доход
-            </Text>
+          <Text style={[styles.headerTitle, { color: colors.text.primary }]}>
+            Редактирование транзакции
+          </Text>
+          <TouchableOpacity onPress={handleDelete} style={styles.deleteIcon}>
+            <Icon name="delete" size={24} color={colors.error} />
           </TouchableOpacity>
         </View>
 
-        {/* Amount Input */}
-        <View
-          style={[styles.amountContainer, { backgroundColor: colors.surface }]}
+        <ScrollView
+          style={styles.content}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
-          <Text style={[styles.amountLabel, { color: colors.text.secondary }]}>
-            Сумма
-          </Text>
-          <TextInput
-            style={[
-              styles.amountInput,
-              {
-                color: colors.text.primary,
-                fontFamily: 'monospace',
-              },
-            ]}
-            placeholder="0.00"
-            placeholderTextColor={colors.text.secondary}
-            keyboardType="decimal-pad"
-            value={amount}
-            onChangeText={handleAmountChange}
-            editable={!isSaving}
-          />
-          <Text
-            style={[styles.amountPreview, { color: colors.text.secondary }]}
+          {/* Type Selector */}
+          <View
+            style={[styles.typeSelector, { backgroundColor: colors.surface }]}
           >
-            {formatDisplayAmount()}
-          </Text>
-        </View>
-
-        {/* Note Input */}
-        <View
-          style={[styles.noteContainer, { backgroundColor: colors.surface }]}
-        >
-          <Icon name="pencil" size={20} color={colors.text.secondary} />
-          <TextInput
-            style={[styles.noteInput, { color: colors.text.primary }]}
-            placeholder="Добавить заметку (необязательно)"
-            placeholderTextColor={colors.text.secondary}
-            value={note}
-            onChangeText={setNote}
-            maxLength={50}
-            editable={!isSaving}
-          />
-        </View>
-
-        {/* Recurring Switch - ТОЛЬКО ДЛЯ ДОХОДОВ */}
-        {transactionType === 'income' && (
-          <View style={[styles.recurringContainer, { backgroundColor: colors.surface }]}>
-            <View style={styles.recurringHeader}>
-              <View style={styles.recurringIconContainer}>
-                <Icon 
-                  name={isRecurring ? "calendar-repeat" : "calendar-blank"} 
-                  size={20} 
-                  color={isRecurring ? colors.success : colors.text.secondary} 
-                />
-                <Text style={[styles.recurringTitle, { color: colors.text.primary }]}>
-                  Регулярный доход
-                </Text>
-              </View>
-              <Switch
-                value={isRecurring}
-                onValueChange={setIsRecurring}
-                trackColor={{ false: '#767577', true: colors.success }}
-                thumbColor={isRecurring ? '#FFFFFF' : '#F4F3F4'}
+            <TouchableOpacity
+              style={[
+                styles.typeButton,
+                transactionType === 'expense' && {
+                  backgroundColor: colors.error + '20',
+                },
+              ]}
+              onPress={() => handleTypeChange('expense')}
+            >
+              <Icon
+                name="arrow-down"
+                size={20}
+                color={
+                  transactionType === 'expense'
+                    ? colors.error
+                    : colors.text.secondary
+                }
               />
-            </View>
-            
-            {isRecurring && (
-              <>
-                <Text style={[styles.recurringDescription, { color: colors.text.secondary }]}>
-                  Регулярные доходы будут автоматически добавляться по расписанию. 
-                  Это удобно для зарплаты, аванса и других постоянных поступлений.
-                </Text>
-                
-                {/* Periodicity Selection */}
-                <View style={styles.periodicityContainer}>
-                  <Text style={[styles.periodicityLabel, { color: colors.text.secondary }]}>
-                    Периодичность:
-                  </Text>
-                  <View style={styles.periodicityButtons}>
-                    <TouchableOpacity
-                      style={[
-                        styles.periodicityButton,
-                        recurringType === 'monthly' && {
-                          backgroundColor: colors.success + '20',
-                          borderColor: colors.success,
-                        },
-                        { borderColor: colors.border || '#E0E0E0' }
-                      ]}
-                      onPress={() => setRecurringType('monthly')}
-                    >
-                      <Text
-                        style={[
-                          styles.periodicityText,
-                          {
-                            color: recurringType === 'monthly'
-                              ? colors.success
-                              : colors.text.secondary,
-                          },
-                        ]}
-                      >
-                        Ежемесячно
-                      </Text>
-                    </TouchableOpacity>
-                    
-                    <TouchableOpacity
-                      style={[
-                        styles.periodicityButton,
-                        recurringType === 'weekly' && {
-                          backgroundColor: colors.success + '20',
-                          borderColor: colors.success,
-                        },
-                        { borderColor: colors.border || '#E0E0E0' }
-                      ]}
-                      onPress={() => setRecurringType('weekly')}
-                    >
-                      <Text
-                        style={[
-                          styles.periodicityText,
-                          {
-                            color: recurringType === 'weekly'
-                              ? colors.success
-                              : colors.text.secondary,
-                          },
-                        ]}
-                      >
-                        Еженедельно
-                      </Text>
-                    </TouchableOpacity>
-                    
-                    <TouchableOpacity
-                      style={[
-                        styles.periodicityButton,
-                        recurringType === 'yearly' && {
-                          backgroundColor: colors.success + '20',
-                          borderColor: colors.success,
-                        },
-                        { borderColor: colors.border || '#E0E0E0' }
-                      ]}
-                      onPress={() => setRecurringType('yearly')}
-                    >
-                      <Text
-                        style={[
-                          styles.periodicityText,
-                          {
-                            color: recurringType === 'yearly'
-                              ? colors.success
-                              : colors.text.secondary,
-                          },
-                        ]}
-                      >
-                        Ежегодно
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-                
-                {/* Info about next occurrence */}
-                <View style={[styles.infoBox, { backgroundColor: colors.background }]}>
-                  <Icon name="information" size={16} color={colors.primary} />
-                  <Text style={[styles.infoText, { color: colors.text.secondary }]}>
-                    Следующее поступление: {formatCurrency(numericAmount)} 
-                    {' '}
-                    {recurringType === 'monthly' && 'через месяц'}
-                    {recurringType === 'weekly' && 'через неделю'}
-                    {recurringType === 'yearly' && 'через год'}
-                  </Text>
-                </View>
-              </>
-            )}
+              <Text
+                style={[
+                  styles.typeText,
+                  {
+                    color:
+                      transactionType === 'expense'
+                        ? colors.error
+                        : colors.text.secondary,
+                  },
+                ]}
+              >
+                Расход
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.typeButton,
+                transactionType === 'income' && {
+                  backgroundColor: colors.success + '20',
+                },
+              ]}
+              onPress={() => handleTypeChange('income')}
+            >
+              <Icon
+                name="arrow-up"
+                size={20}
+                color={
+                  transactionType === 'income'
+                    ? colors.success
+                    : colors.text.secondary
+                }
+              />
+              <Text
+                style={[
+                  styles.typeText,
+                  {
+                    color:
+                      transactionType === 'income'
+                        ? colors.success
+                        : colors.text.secondary,
+                  },
+                ]}
+              >
+                Доход
+              </Text>
+            </TouchableOpacity>
           </View>
-        )}
 
-        {/* Category Selector */}
-        <CategorySelector
-          categories={categories}
-          selectedCategoryId={selectedCategoryId}
-          onSelectCategory={setSelectedCategoryId}
-          type={transactionType}
-        />
+          {/* Amount Input */}
+          <View
+            style={[
+              styles.amountContainer,
+              { backgroundColor: colors.surface },
+            ]}
+          >
+            <Text
+              style={[styles.amountLabel, { color: colors.text.secondary }]}
+            >
+              Сумма
+            </Text>
+            <TextInput
+              style={[
+                styles.amountInput,
+                {
+                  color: colors.text.primary,
+                  fontFamily: 'monospace',
+                },
+              ]}
+              placeholder="0.00"
+              placeholderTextColor={colors.text.secondary}
+              keyboardType="decimal-pad"
+              value={amount}
+              onChangeText={handleAmountChange}
+              editable={!isSaving}
+            />
+            <Text
+              style={[styles.amountPreview, { color: colors.text.secondary }]}
+            >
+              {formatDisplayAmount()}
+            </Text>
+          </View>
 
-        {/* Date Picker */}
-        <TouchableOpacity
-          style={[styles.dateContainer, { backgroundColor: colors.surface }]}
-          onPress={() => setShowDatePicker(true)}
-          disabled={isSaving}
-        >
-          <Icon name="calendar" size={20} color={colors.text.secondary} />
-          <Text style={[styles.dateText, { color: colors.text.primary }]}>
-            {date.toLocaleDateString('ru-RU')}
-          </Text>
-          <Icon name="chevron-down" size={20} color={colors.text.secondary} />
-        </TouchableOpacity>
+          {/* Note Input */}
+          <View
+            style={[styles.noteContainer, { backgroundColor: colors.surface }]}
+          >
+            <Icon name="pencil" size={20} color={colors.text.secondary} />
+            <TextInput
+              style={[styles.noteInput, { color: colors.text.primary }]}
+              placeholder="Добавить заметку (необязательно)"
+              placeholderTextColor={colors.text.secondary}
+              value={note}
+              onChangeText={setNote}
+              maxLength={50}
+              editable={!isSaving}
+            />
+          </View>
 
-        {showDatePicker && (
-          <DateTimePicker
-            value={date}
-            mode="date"
-            locale="ru-RU"
-            onChange={(event, selectedDate) => {
-              setShowDatePicker(false);
-              if (selectedDate) {
-                setDate(selectedDate);
-              }
-            }}
-          />
-        )}
+          {/* Recurring Switch - ТОЛЬКО ДЛЯ ДОХОДОВ */}
+          {transactionType === 'income' && (
+            <View
+              style={[
+                styles.recurringContainer,
+                { backgroundColor: colors.surface },
+              ]}
+            >
+              <View style={styles.recurringHeader}>
+                <View style={styles.recurringIconContainer}>
+                  <Icon
+                    name={isRecurring ? 'calendar-repeat' : 'calendar-blank'}
+                    size={20}
+                    color={isRecurring ? colors.success : colors.text.secondary}
+                  />
+                  <Text
+                    style={[
+                      styles.recurringTitle,
+                      { color: colors.text.primary },
+                    ]}
+                  >
+                    Регулярный доход
+                  </Text>
+                </View>
+                <Switch
+                  value={isRecurring}
+                  onValueChange={setIsRecurring}
+                  trackColor={{ false: '#767577', true: colors.success }}
+                  thumbColor={isRecurring ? '#FFFFFF' : '#F4F3F4'}
+                />
+              </View>
 
-        {/* Save Button */}
-        <TouchableOpacity
-          style={[styles.saveButton, { backgroundColor: colors.primary }]}
-          onPress={handleSave}
-          disabled={isSaving}
-        >
-          {isSaving ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
-          ) : (
-            <>
-              <Icon name="content-save" size={20} color="#FFFFFF" />
-              <Text style={styles.saveButtonText}>Сохранить изменения</Text>
-            </>
+              {isRecurring && (
+                <>
+                  <Text
+                    style={[
+                      styles.recurringDescription,
+                      { color: colors.text.secondary },
+                    ]}
+                  >
+                    Регулярные доходы будут автоматически добавляться по
+                    расписанию. Это удобно для зарплаты, аванса и других
+                    постоянных поступлений.
+                  </Text>
+
+                  {/* Periodicity Selection */}
+                  <View style={styles.periodicityContainer}>
+                    <Text
+                      style={[
+                        styles.periodicityLabel,
+                        { color: colors.text.secondary },
+                      ]}
+                    >
+                      Периодичность:
+                    </Text>
+                    <View style={styles.periodicityButtons}>
+                      <TouchableOpacity
+                        style={[
+                          styles.periodicityButton,
+                          recurringType === 'monthly' && {
+                            backgroundColor: colors.success + '20',
+                            borderColor: colors.success,
+                          },
+                          { borderColor: colors.border || '#E0E0E0' },
+                        ]}
+                        onPress={() => setRecurringType('monthly')}
+                      >
+                        <Text
+                          style={[
+                            styles.periodicityText,
+                            {
+                              color:
+                                recurringType === 'monthly'
+                                  ? colors.success
+                                  : colors.text.secondary,
+                            },
+                          ]}
+                        >
+                          Ежемесячно
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={[
+                          styles.periodicityButton,
+                          recurringType === 'weekly' && {
+                            backgroundColor: colors.success + '20',
+                            borderColor: colors.success,
+                          },
+                          { borderColor: colors.border || '#E0E0E0' },
+                        ]}
+                        onPress={() => setRecurringType('weekly')}
+                      >
+                        <Text
+                          style={[
+                            styles.periodicityText,
+                            {
+                              color:
+                                recurringType === 'weekly'
+                                  ? colors.success
+                                  : colors.text.secondary,
+                            },
+                          ]}
+                        >
+                          Еженедельно
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={[
+                          styles.periodicityButton,
+                          recurringType === 'yearly' && {
+                            backgroundColor: colors.success + '20',
+                            borderColor: colors.success,
+                          },
+                          { borderColor: colors.border || '#E0E0E0' },
+                        ]}
+                        onPress={() => setRecurringType('yearly')}
+                      >
+                        <Text
+                          style={[
+                            styles.periodicityText,
+                            {
+                              color:
+                                recurringType === 'yearly'
+                                  ? colors.success
+                                  : colors.text.secondary,
+                            },
+                          ]}
+                        >
+                          Ежегодно
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  {/* Info about next occurrence */}
+                  <View
+                    style={[
+                      styles.infoBox,
+                      { backgroundColor: colors.background },
+                    ]}
+                  >
+                    <Icon name="information" size={16} color={colors.primary} />
+                    <Text
+                      style={[
+                        styles.infoText,
+                        { color: colors.text.secondary },
+                      ]}
+                    >
+                      Следующее поступление: {formatCurrency(numericAmount)}{' '}
+                      {recurringType === 'monthly' && 'через месяц'}
+                      {recurringType === 'weekly' && 'через неделю'}
+                      {recurringType === 'yearly' && 'через год'}
+                    </Text>
+                  </View>
+                </>
+              )}
+            </View>
           )}
-        </TouchableOpacity>
-      </ScrollView>
-    </KeyboardAvoidingView>
+
+          {/* Category Selector */}
+          <CategorySelector
+            categories={categories}
+            selectedCategoryId={selectedCategoryId}
+            onSelectCategory={setSelectedCategoryId}
+            type={transactionType}
+          />
+
+          {/* Date Picker */}
+          <TouchableOpacity
+            style={[styles.dateContainer, { backgroundColor: colors.surface }]}
+            onPress={() => setShowDatePicker(true)}
+            disabled={isSaving}
+          >
+            <Icon name="calendar" size={20} color={colors.text.secondary} />
+            <Text style={[styles.dateText, { color: colors.text.primary }]}>
+              {date.toLocaleDateString('ru-RU')}
+            </Text>
+            <Icon name="chevron-down" size={20} color={colors.text.secondary} />
+          </TouchableOpacity>
+
+          {showDatePicker && (
+            <DateTimePicker
+              value={date}
+              mode="date"
+              locale="ru-RU"
+              onChange={(event, selectedDate) => {
+                setShowDatePicker(false);
+                if (selectedDate) {
+                  setDate(selectedDate);
+                }
+              }}
+            />
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
+      {/* Save Button */}
+      <TouchableOpacity
+        style={[styles.saveButton, { backgroundColor: colors.primary }]}
+        onPress={handleSave}
+        disabled={isSaving}
+      >
+        {isSaving ? (
+          <ActivityIndicator size="small" color="#FFFFFF" />
+        ) : (
+          <>
+            <Text style={styles.saveButtonText}>Сохранить изменения</Text>
+          </>
+        )}
+      </TouchableOpacity>
+    </SafeAreaView>
   );
 };
 
@@ -723,7 +767,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginHorizontal: 16,
-    marginVertical: 24,
+    marginTop: 0,
+    marginVertical: 16,
     paddingVertical: 16,
     borderRadius: 12,
     gap: 8,

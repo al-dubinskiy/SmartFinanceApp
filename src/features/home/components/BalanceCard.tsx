@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, Animated, Easing, TouchableOpacity } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../../core/hooks/useTheme';
 import { formatCurrency } from '../../../core/utils/formatters';
@@ -22,6 +22,7 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
   totalBalance = 0,
 }) => {
   const { colors } = useTheme();
+  const [isBalanceHidden, setIsBalanceHidden] = useState(false);
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
 
   React.useEffect(() => {
@@ -34,6 +35,31 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
       }).start();
     }
   }, [isLoading]);
+
+  const toggleBalanceVisibility = () => {
+    setIsBalanceHidden(!isBalanceHidden);
+  };
+
+  const getDisplayedBalance = () => {
+    if (isBalanceHidden) {
+      return '••••••';
+    }
+    return formatCurrency(totalBalance, currency);
+  };
+
+  const getDisplayedIncome = () => {
+    if (isBalanceHidden) {
+      return '••••••';
+    }
+    return formatCurrency(income, currency);
+  };
+
+  const getDisplayedExpense = () => {
+    if (isBalanceHidden) {
+      return '••••••';
+    }
+    return formatCurrency(expense, currency);
+  };
 
   if (isLoading) {
     return (
@@ -52,11 +78,17 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
         <Text style={[styles.label, { color: colors.text.secondary }]}>
           Общий баланс
         </Text>
-        <Icon name="eye-off" size={20} color={colors.text.secondary} />
+        <TouchableOpacity onPress={toggleBalanceVisibility} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <Icon 
+            name={isBalanceHidden ? "eye" : "eye-off"} 
+            size={20} 
+            color={colors.text.secondary} 
+          />
+        </TouchableOpacity>
       </View>
 
       <Text style={[styles.balance, { color: colors.text.primary }]}>
-        {formatCurrency(totalBalance, currency)}
+        {getDisplayedBalance()}
       </Text>
 
       <View style={styles.statsContainer}>
@@ -69,7 +101,7 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
               Доходы
             </Text>
             <Text style={[styles.statAmount, { color: colors.success }]}>
-              {formatCurrency(income, currency)}
+              {getDisplayedIncome()}
             </Text>
           </View>
         </View>
@@ -85,7 +117,7 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
               Расходы
             </Text>
             <Text style={[styles.statAmount, { color: colors.error }]}>
-              {formatCurrency(expense, currency)}
+              {getDisplayedExpense()}
             </Text>
           </View>
         </View>

@@ -34,6 +34,7 @@ export const HomeScreen: React.FC<MainTabScreenProps<'Home'>> = ({
   const { user } = useAppSelector(state => state.auth);
 
   const [transactions, setTransactions] = useState<any[]>([]);
+  const [allTransactions, setAllTransactions] = useState<any[]>([]);
   const [stats, setStats] = useState<Stats>({
     totalIncome: 0,
     totalExpense: 0,
@@ -47,6 +48,34 @@ export const HomeScreen: React.FC<MainTabScreenProps<'Home'>> = ({
   // Функция для получения данных из _raw или напрямую
   const getRawData = (item: any) => {
     return item._raw || item;
+  };
+
+  // Форматирование транзакций для отображения
+  const formatTransactions = (transactionsList: any[], categoryMap: Map<string, any>) => {
+    return transactionsList.map((t: any) => {
+      const raw = getRawData(t);
+      const category = categoryMap.get(raw.category_id);
+
+      return {
+        id: t.id || raw.id,
+        amount: raw.amount,
+        type: raw.type,
+        categoryId: raw.category_id,
+        note: raw.note,
+        date: raw.date,
+        category: category
+          ? {
+              name: category.name,
+              icon: category.icon,
+              color: category.color,
+            }
+          : {
+              name: 'Без категории',
+              icon: 'help-circle',
+              color: colors.text.secondary,
+            },
+      };
+    });
   };
 
   const loadData = useCallback(async () => {
@@ -77,16 +106,15 @@ export const HomeScreen: React.FC<MainTabScreenProps<'Home'>> = ({
         balance: statistics.balance,
       });
 
-      const goals = await getGoalsCollection().query().fetch()
+            const goals = await getGoalsCollection().query().fetch()
       const budgets = await getBudgetsCollection().query().fetch()
       const transactions = await getTransactionsCollection().query().fetch()
       console.log('Список всех бюджетов', budgets.map(el => el._raw))
       console.log('Список всех целей', goals.map(el => el._raw))
       console.log('Список всех транзакций', transactions.map(el => el._raw))
-
-
-      const recent = await transactionService.getRecentTransactions(50);
-
+      // Получаем все транзакции
+      const allTransactionsList = await transactionService.getRecentTransactions(1000);
+      
       // Получаем все категории для маппинга
       const allCategories = await categoryService.getAllCategories();
       const categoryMap = new Map<string, any>();
@@ -103,49 +131,31 @@ export const HomeScreen: React.FC<MainTabScreenProps<'Home'>> = ({
       };
 
       // Получаем деревья категорий для расходов и доходов
-      const expenseTree = await categoryService.getCategoriesByTypeWithTree(
-        'expense',
-      );
-      const incomeTree = await categoryService.getCategoriesByTypeWithTree(
-        'income',
-      );
+      const expenseTree = await categoryService.getCategoriesByTypeWithTree('expense');
+      const incomeTree = await categoryService.getCategoriesByTypeWithTree('income');
 
       addCategoriesToMap(expenseTree);
       addCategoriesToMap(incomeTree);
 
-      // Форматируем транзакции для отображения
-      const formattedTransactions = recent.map((t: any) => {
-        const raw = getRawData(t);
-        const category = categoryMap.get(raw.category_id);
-
-        return {
-          id: t.id || raw.id,
-          amount: raw.amount,
-          type: raw.type,
-          categoryId: raw.category_id,
-          note: raw.note,
-          date: raw.date,
-          category: category
-            ? {
-                name: category.name,
-                icon: category.icon,
-                color: category.color,
-              }
-            : {
-                name: 'Без категории',
-                icon: 'help-circle',
-                color: colors.text.secondary,
-              },
-        };
-      });
-
+      // Форматируем все транзакции
+      const formattedAllTransactions = formatTransactions(allTransactionsList, categoryMap);
+      
       // Сортируем по дате (новые сверху)
-      formattedTransactions.sort((a, b) => b.date - a.date);
-
-      setTransactions(formattedTransactions);
+      formattedAllTransactions.sort((a, b) => b.date - a.date);
+      
+      setAllTransactions(formattedAllTransactions);
+      
+      // Берем только первые 20 для отображения на главном экране
+      const recentTransactions = formattedAllTransactions.slice(0, 20);
+      setTransactions(recentTransactions);
 
       const totalBalanceCalc = await transactionService.getTotalBalance();
       setTotalBalance(totalBalanceCalc);
+      
+      // Логирование для отладки
+      console.log(`📊 Всего транзакций: ${formattedAllTransactions.length}`);
+      console.log(`📊 На главном экране: ${recentTransactions.length}`);
+      
     } catch (error) {
       console.error('Failed to load home data:', error);
     } finally {
@@ -156,7 +166,7 @@ export const HomeScreen: React.FC<MainTabScreenProps<'Home'>> = ({
 
   useEffect(() => {
     loadData();
-  }, [loadData]);
+  }, [loadData, isFocused]);
 
   const handleRefresh = () => {
     setIsRefreshing(true);
@@ -205,6 +215,11 @@ export const HomeScreen: React.FC<MainTabScreenProps<'Home'>> = ({
 
   const handleAddTransaction = (type: 'income' | 'expense') => {
     navigation.getParent()?.navigate('AddTransactionModal', { type });
+  };
+
+  const handleViewAllTransactions = () => {
+    // Передаем все транзакции на экран со списком
+    navigation.navigate('AllTransactions', { transactions: allTransactions });
   };
 
   if (isLoading) {
@@ -296,7 +311,7 @@ export const HomeScreen: React.FC<MainTabScreenProps<'Home'>> = ({
           <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
             Недавние транзакции
           </Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Analytics')}>
+          <TouchableOpacity onPress={handleViewAllTransactions}>
             <Text style={[styles.seeAllText, { color: colors.primary }]}>
               Посмотреть все
             </Text>
@@ -348,6 +363,19 @@ export const HomeScreen: React.FC<MainTabScreenProps<'Home'>> = ({
                 onDelete={() => handleTransactionDelete(transaction)}
               />
             ))}
+            
+            {/* Индикатор, что есть еще транзакции */}
+            {allTransactions.length > 20 && (
+              <TouchableOpacity
+                style={[styles.showMoreButton, { backgroundColor: colors.surface }]}
+                onPress={handleViewAllTransactions}
+              >
+                <Text style={[styles.showMoreText, { color: colors.primary }]}>
+                  + еще {allTransactions.length - 20} транзакций
+                </Text>
+                <Icon name="arrow-right" size={16} color={colors.primary} />
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
@@ -406,6 +434,20 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 18, fontWeight: '600' },
   seeAllText: { fontSize: 14, fontWeight: '500' },
   transactionsList: { marginBottom: 8 },
+  showMoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 16,
+    marginVertical: 8,
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 8,
+  },
+  showMoreText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
   emptyContainer: {
     marginHorizontal: 16,
     padding: 32,

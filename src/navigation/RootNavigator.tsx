@@ -15,6 +15,7 @@ import { TransactionDetailScreen } from '../features/transactions/screens/Transa
 import { EditTransactionScreen } from '../features/transactions/screens/EditTransactionScreen';
 import { CategoriesScreen } from '../features/profile/screens/CategoriesScreen';
 import { ReportsScreen } from '../features/analytics/screens/ReportsScreen';
+import { AllTransactionsScreen } from '../features/transactions/screens/AllTransactionsScreen';
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 
@@ -74,6 +75,14 @@ export const RootNavigator = () => {
       ) : (
         <RootStack.Screen name="Main" component={BottomTabNavigator} />
       )}
+
+      <RootStack.Screen 
+        name="AllTransactions" 
+        component={AllTransactionsScreen}
+        options={{
+          headerShown: false,
+        }}
+      />
 
       <RootStack.Screen
         name="TransactionDetail"
