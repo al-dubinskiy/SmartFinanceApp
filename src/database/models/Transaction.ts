@@ -13,7 +13,7 @@ export class Transaction extends Model {
   @text('recurring_type') recurringType!: string | null;
   @text('location') location!: string | null;
   // @json('attachments', () => []) attachments!: any[];
-
+  @field('goal_id') goalId!: string | null;
   @field('created_at') createdAt!: number;
   @field('updated_at') updatedAt!: number;
 

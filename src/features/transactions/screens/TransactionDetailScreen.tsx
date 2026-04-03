@@ -106,7 +106,7 @@ export const TransactionDetailScreen: React.FC<
       case 'yearly':
         return 'calendar-today';
       default:
-        return 'calendar-repeat';
+        return 'calendar-blank';
     }
   };
 
@@ -212,45 +212,48 @@ export const TransactionDetailScreen: React.FC<
         </View>
 
         {/* Recurring Info */}
-        <View style={[styles.infoCard, { backgroundColor: colors.surface }]}>
-          <View style={styles.infoRow}>
-            <Icon
-              name={getRecurringIcon(recurringType)}
-              size={24}
-              color={isRecurring ? colors.primary : colors.text.secondary}
-            />
-            <View style={styles.infoContent}>
-              <Text
-                style={[styles.infoLabel, { color: colors.text.secondary }]}
-              >
-                Регулярный
-              </Text>
-              <Text style={[styles.infoValue, { color: colors.text.primary }]}>
-                {isRecurring ? 'Да' : 'Нет'}
-              </Text>
-              {isRecurring && recurringType && (
-                <View style={styles.recurringBadge}>
-                  <Icon
-                    name={getRecurringIcon(recurringType)}
-                    size={14}
-                    color={colors.primary}
-                  />
-                  <Text
-                    style={[
-                      styles.recurringTypeText,
-                      { color: colors.primary },
-                    ]}
-                  >
-                    {getRecurringTypeText(recurringType)}
-                  </Text>
-                </View>
-              )}
+        {category?.name !== 'Накопления' && transaction.type === 'income' ? (
+          <View style={[styles.infoCard, { backgroundColor: colors.surface }]}>
+            <View style={styles.infoRow}>
+              <Icon
+                name={getRecurringIcon(recurringType)}
+                size={24}
+                color={isRecurring ? colors.primary : colors.text.secondary}
+              />
+              <View style={styles.infoContent}>
+                <Text
+                  style={[styles.infoLabel, { color: colors.text.secondary }]}
+                >
+                  Регулярный
+                </Text>
+                <Text
+                  style={[styles.infoValue, { color: colors.text.primary }]}
+                >
+                  {isRecurring ? 'Да' : 'Нет'}
+                </Text>
+                {isRecurring && recurringType && (
+                  <View style={styles.recurringBadge}>
+                    <Icon
+                      name={getRecurringIcon(recurringType)}
+                      size={14}
+                      color={colors.primary}
+                    />
+                    <Text
+                      style={[
+                        styles.recurringTypeText,
+                        { color: colors.primary },
+                      ]}
+                    >
+                      {getRecurringTypeText(recurringType)}
+                    </Text>
+                  </View>
+                )}
+              </View>
             </View>
           </View>
-        </View>
-
+        ) : null}
         {/* Date */}
-        <View style={[styles.infoCard, { backgroundColor: colors.surface }]}>
+       {category?.name !== 'Накопления' ?  <View style={[styles.infoCard, { backgroundColor: colors.surface }]}>
           <View style={styles.infoRow}>
             <Icon name="calendar" size={24} color={colors.text.secondary} />
             <View style={styles.infoContent}>
@@ -264,7 +267,7 @@ export const TransactionDetailScreen: React.FC<
               </Text>
             </View>
           </View>
-        </View>
+        </View> : null}
 
         {/* Note */}
         {transaction.note ? (

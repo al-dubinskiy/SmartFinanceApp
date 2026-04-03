@@ -15,11 +15,14 @@ import {
   Pressable,
   TouchableWithoutFeedback,
   Keyboard,
+  Dimensions,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../../core/hooks/useTheme';
 import categoryService from '../../../core/services/category.service';
 import budgetService from '../../../core/services/budget.service';
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 // Включаем LayoutAnimation для Android
 if (
@@ -29,17 +32,20 @@ if (
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-interface AddBudgetModalProps {
+interface EditBudgetModalProps {
   visible: boolean;
+  budget: any;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export const AddBudgetModal: React.FC<AddBudgetModalProps> = ({
+export const EditBudgetModal: React.FC<EditBudgetModalProps> = ({
   visible,
+  budget,
   onClose,
   onSuccess,
 }) => {
+  const budgetData = budget?.budget;
   const { colors } = useTheme();
   const [categories, setCategories] = useState<any[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
@@ -57,8 +63,12 @@ export const AddBudgetModal: React.FC<AddBudgetModalProps> = ({
   useEffect(() => {
     if (visible) {
       loadCategories();
+      if (budgetData) {
+        setSelectedCategoryId(budgetData.categoryId);
+        setAmount(budgetData.amount?.toString() || '');
+      }
     }
-  }, [visible]);
+  }, [visible, budgetData]);
 
   const loadCategories = async () => {
     try {
@@ -284,22 +294,15 @@ export const AddBudgetModal: React.FC<AddBudgetModalProps> = ({
 
     setIsLoading(true);
     try {
-      const now = new Date();
-      await budgetService.createBudget({
+      await budgetService.updateBudget(budgetData.id, {
         categoryId: selectedCategoryId,
         amount: budgetAmount,
-        period: 'monthly',
-        month: now.getMonth(),
-        year: now.getFullYear(),
       });
 
       onSuccess();
       onClose();
-      setAmount('');
-      setSelectedCategoryId(null);
-      setSearchQuery('');
     } catch (error) {
-      Alert.alert('Ошибка', 'Не удалось создать бюджет');
+      Alert.alert('Ошибка', 'Не удалось обновить бюджет');
       console.error(error);
     } finally {
       setIsLoading(false);
@@ -323,6 +326,8 @@ export const AddBudgetModal: React.FC<AddBudgetModalProps> = ({
         })()
       : null;
 
+  if (!budgetData) return null;
+
   return (
     <>
       <Modal
@@ -334,9 +339,19 @@ export const AddBudgetModal: React.FC<AddBudgetModalProps> = ({
         <Pressable style={styles.overlay} onPress={onClose}>
           <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
             <View style={[styles.modal, { backgroundColor: colors.surface }]}>
+              {/* Индикатор свайпа */}
+              <View style={styles.swipeIndicatorContainer}>
+                <View
+                  style={[
+                    styles.swipeIndicator,
+                    { backgroundColor: colors.border },
+                  ]}
+                />
+              </View>
+
               <View style={styles.header}>
                 <Text style={[styles.title, { color: colors.text.primary }]}>
-                  Добавить бюджет
+                  Редактировать бюджет
                 </Text>
                 <TouchableOpacity onPress={onClose} style={styles.closeButton}>
                   <Icon name="close" size={24} color={colors.text.secondary} />
@@ -593,8 +608,19 @@ const styles = StyleSheet.create({
   modal: {
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    padding: 20,
-    maxHeight: '80%',
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 20,
+    maxHeight: SCREEN_HEIGHT * 0.8,
+  },
+  swipeIndicatorContainer: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  swipeIndicator: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
   },
   header: {
     flexDirection: 'row',
@@ -613,6 +639,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     marginBottom: 8,
+    // marginTop: 12,
   },
   categorySelector: {
     flexDirection: 'row',

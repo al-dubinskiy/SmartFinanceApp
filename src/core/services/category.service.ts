@@ -167,6 +167,15 @@ class CategoryService {
 
     return roots;
   }
+
+  async getCategoryByName(name: string): Promise<any> {
+    const categories = getCategoriesCollection();
+    const results = await categories
+      .query(Q.where('name', name))
+      .fetch();
+    
+    return results.length > 0 ? results[0] : null;
+  }
 }
 
 export default new CategoryService();

@@ -17,6 +17,7 @@ const EXPENSE_CATEGORIES = [
   { name: 'Одежда', icon: 'tshirt-crew', color: '#DB7093', type: 'expense', order: 13 },
   { name: 'Спорт и хобби', icon: 'basketball', color: '#228B22', type: 'expense', order: 14 },
   { name: 'Путешествия', icon: 'airplane', color: '#1E90FF', type: 'expense', order: 15 },
+  { name: 'Накопления', icon: 'piggy-bank', color: '#9B59B6', type: 'expense', order: 18 },
 ];
 
 const INCOME_CATEGORIES = [

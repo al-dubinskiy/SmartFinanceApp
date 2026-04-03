@@ -112,6 +112,7 @@ class BudgetService {
         if (data.period !== undefined) record.period = data.period;
         if (data.month !== undefined) record.month = data.month;
         if (data.year !== undefined) record.year = data.year;
+        if (data.categoryId !== undefined) record.categoryId = data.categoryId;
         record.updatedAt = Date.now();
       });
     });

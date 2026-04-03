@@ -3,10 +3,12 @@ import SQLiteAdapter from '@nozbe/watermelondb/adapters/sqlite';
 
 import { schema } from './schema';
 import { Category, Transaction, Budget, Goal } from './models';
+import migrations from './model/migrations';
 
 // Создаем адаптер с OP-SQLite (полностью совместим!)
 const adapter = new SQLiteAdapter({
   schema,
+  migrations,
   dbName: 'smartfinance',
   
   // Опционально: миграции будут добавлены позже

@@ -18,7 +18,7 @@ import { BalanceCard } from '../components/BalanceCard';
 import { TransactionItem } from '../components/TransactionItem';
 import { formatMonthYear } from '../../../core/utils/formatters';
 import { useIsFocused } from '@react-navigation/native';
-import { getBudgetsCollection, getGoalsCollection, getTransactionsCollection } from '../../../database';
+import { getBudgetsCollection, getCategoriesCollection, getGoalsCollection, getTransactionsCollection } from '../../../database';
 
 interface Stats {
   totalIncome: number;
@@ -106,9 +106,11 @@ export const HomeScreen: React.FC<MainTabScreenProps<'Home'>> = ({
         balance: statistics.balance,
       });
 
-            const goals = await getGoalsCollection().query().fetch()
+      const categories = await getCategoriesCollection().query().fetch()
+      const goals = await getGoalsCollection().query().fetch()
       const budgets = await getBudgetsCollection().query().fetch()
       const transactions = await getTransactionsCollection().query().fetch()
+      console.log('Список всех категорий', categories.map(el => el._raw))
       console.log('Список всех бюджетов', budgets.map(el => el._raw))
       console.log('Список всех целей', goals.map(el => el._raw))
       console.log('Список всех транзакций', transactions.map(el => el._raw))

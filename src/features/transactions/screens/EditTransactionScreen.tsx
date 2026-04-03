@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import { useTheme } from '../../../core/hooks/useTheme';
 import { formatCurrency } from '../../../core/utils/formatters';
 import transactionService from '../../../core/services/transaction.service';
 import categoryService from '../../../core/services/category.service';
+import goalService from '../../../core/services/goal.service';
 import { CategorySelector } from '../components/CategorySelector';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -40,10 +41,14 @@ export const EditTransactionScreen: React.FC<EditTransactionScreenProps> = ({
   const [transaction, setTransaction] = useState<any>(null);
   const [categories, setCategories] = useState<any[]>([]);
   const [amount, setAmount] = useState<string>('');
+  const [originalAmount, setOriginalAmount] = useState<number>(0);
   const [note, setNote] = useState<string>('');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
     null,
   );
+  const [selectedCategoryName, setSelectedCategoryName] = useState<
+    string | null
+  >(null);
   const [transactionType, setTransactionType] = useState<'income' | 'expense'>(
     'expense',
   );
@@ -51,6 +56,9 @@ export const EditTransactionScreen: React.FC<EditTransactionScreenProps> = ({
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [linkedGoalId, setLinkedGoalId] = useState<string | null>(null);
+  const [linkedGoalName, setLinkedGoalName] = useState<string | null>(null);
+  const [isSavingsTransaction, setIsSavingsTransaction] = useState(false);
 
   // Состояния для регулярных транзакций
   const [isRecurring, setIsRecurring] = useState(false);
@@ -75,13 +83,61 @@ export const EditTransactionScreen: React.FC<EditTransactionScreenProps> = ({
 
       if (found) {
         const raw: any = found._raw || found;
-        setAmount(raw.amount?.toString() || '0');
+
+        const category = raw.category_id
+          ? await categoryService.getCategoryById(raw.category_id)
+          : null;
+        const originalAmountValue = raw.amount || 0;
+
+        setAmount(originalAmountValue.toString());
+        setOriginalAmount(originalAmountValue);
         setNote(raw.note || '');
         setSelectedCategoryId(raw.category_id);
+        if (category?.name) {
+          setSelectedCategoryName(category.name);
+        }
         setTransactionType(raw.type || 'expense');
         setDate(new Date(raw.date || Date.now()));
         setIsRecurring(raw.is_recurring || false);
         setRecurringType(raw.recurring_type || 'monthly');
+
+        // Проверяем, является ли транзакция пополнением цели (по goal_id)
+        const hasGoalId = raw.goal_id && raw.goal_id !== '';
+        const isSavingsByCategory =
+          category?.name === 'Накопления' && raw.type === 'expense';
+        const isSavings = hasGoalId || isSavingsByCategory;
+
+        setIsSavingsTransaction(isSavings);
+
+        // Если есть goal_id, используем его напрямую
+        if (hasGoalId) {
+          setLinkedGoalId(raw.goal_id);
+          if (raw.note) {
+            const goalNameMatch = raw.note.match(
+              /Пополнение цели "(.+?)" на сумму/,
+            );
+            if (goalNameMatch) {
+              const goalName = goalNameMatch[1];
+
+              setLinkedGoalName(goalName);
+            }
+          }
+        }
+        // Если нет goal_id, но это транзакция накопления, пробуем найти по заметке (для обратной совместимости)
+        else if (isSavingsByCategory && raw.note) {
+          const goalNameMatch = raw.note.match(
+            /Пополнение цели "(.+?)" на сумму/,
+          );
+          if (goalNameMatch) {
+            const goalName = goalNameMatch[1];
+            const goals = await goalService.getActiveGoals();
+            const linkedGoal = goals.find(g => g.name === goalName);
+            if (linkedGoal) {
+              setLinkedGoalId(linkedGoal.id);
+              setLinkedGoalName(goalName);
+            }
+          }
+        }
       }
     } catch (error) {
       console.error('Failed to load transaction:', error);
@@ -168,15 +224,31 @@ export const EditTransactionScreen: React.FC<EditTransactionScreenProps> = ({
   const saveTransaction = async (numericAmount: number) => {
     setIsSaving(true);
     try {
+      // Если это транзакция накопления и есть связанная цель, обновляем сумму цели
+      if (isSavingsTransaction && linkedGoalId) {
+        const amountDifference = numericAmount - originalAmount;
+
+        if (amountDifference !== 0) {
+          // Обновляем сумму накоплений цели
+          await goalService.addToGoal(
+            linkedGoalId,
+            amountDifference,
+            '',
+            false,
+          );
+        }
+      }
+
       await transactionService.updateTransaction(transactionId, {
         amount: numericAmount,
         type: transactionType,
         categoryId: selectedCategoryId,
-        note: note.trim() || undefined,
+        note: `Пополнение цели "${linkedGoalName}" на сумму ${numericAmount} ₽`,
         date: date.getTime(),
         isRecurring: isRecurring && transactionType === 'income',
         recurringType:
           isRecurring && transactionType === 'income' ? recurringType : null,
+        goalId: isSavingsTransaction ? linkedGoalId : null, // Сохраняем связь с целью
       });
 
       navigation.goBack();
@@ -199,6 +271,17 @@ export const EditTransactionScreen: React.FC<EditTransactionScreenProps> = ({
           style: 'destructive',
           onPress: async () => {
             try {
+              // Если это транзакция накопления, удаляем соответствующую сумму из цели
+              if (isSavingsTransaction && linkedGoalId) {
+                const numericAmount = getNumericAmount();
+                await goalService.addToGoal(
+                  linkedGoalId,
+                  -numericAmount,
+                  '',
+                  false,
+                );
+              }
+
               await transactionService.deleteTransaction(transactionId);
               navigation.goBack();
             } catch (error) {
@@ -247,7 +330,9 @@ export const EditTransactionScreen: React.FC<EditTransactionScreenProps> = ({
             <Icon name="arrow-left" size={24} color={colors.text.primary} />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: colors.text.primary }]}>
-            Редактирование транзакции
+            {isSavingsTransaction
+              ? 'Редактирование пополнения'
+              : 'Редактирование транзакции'}
           </Text>
           <TouchableOpacity onPress={handleDelete} style={styles.deleteIcon}>
             <Icon name="delete" size={24} color={colors.error} />
@@ -259,76 +344,114 @@ export const EditTransactionScreen: React.FC<EditTransactionScreenProps> = ({
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Type Selector */}
-          <View
-            style={[styles.typeSelector, { backgroundColor: colors.surface }]}
-          >
-            <TouchableOpacity
-              style={[
-                styles.typeButton,
-                transactionType === 'expense' && {
-                  backgroundColor: colors.error + '20',
-                },
-              ]}
-              onPress={() => handleTypeChange('expense')}
+          {/* Type Selector - скрыт для транзакций накопления */}
+          {!isSavingsTransaction && selectedCategoryName !== 'Накопления' ? (
+            <View
+              style={[styles.typeSelector, { backgroundColor: colors.surface }]}
             >
-              <Icon
-                name="arrow-down"
-                size={20}
-                color={
-                  transactionType === 'expense'
-                    ? colors.error
-                    : colors.text.secondary
-                }
-              />
-              <Text
+              <TouchableOpacity
                 style={[
-                  styles.typeText,
-                  {
-                    color:
-                      transactionType === 'expense'
-                        ? colors.error
-                        : colors.text.secondary,
+                  styles.typeButton,
+                  transactionType === 'expense' && {
+                    backgroundColor: colors.error + '20',
                   },
                 ]}
+                onPress={() => handleTypeChange('expense')}
               >
-                Расход
-              </Text>
-            </TouchableOpacity>
+                <Icon
+                  name="arrow-down"
+                  size={20}
+                  color={
+                    transactionType === 'expense'
+                      ? colors.error
+                      : colors.text.secondary
+                  }
+                />
+                <Text
+                  style={[
+                    styles.typeText,
+                    {
+                      color:
+                        transactionType === 'expense'
+                          ? colors.error
+                          : colors.text.secondary,
+                    },
+                  ]}
+                >
+                  Расход
+                </Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[
-                styles.typeButton,
-                transactionType === 'income' && {
-                  backgroundColor: colors.success + '20',
-                },
-              ]}
-              onPress={() => handleTypeChange('income')}
-            >
-              <Icon
-                name="arrow-up"
-                size={20}
-                color={
-                  transactionType === 'income'
-                    ? colors.success
-                    : colors.text.secondary
-                }
-              />
-              <Text
+              <TouchableOpacity
                 style={[
-                  styles.typeText,
-                  {
-                    color:
-                      transactionType === 'income'
-                        ? colors.success
-                        : colors.text.secondary,
+                  styles.typeButton,
+                  transactionType === 'income' && {
+                    backgroundColor: colors.success + '20',
                   },
                 ]}
+                onPress={() => handleTypeChange('income')}
               >
-                Доход
-              </Text>
-            </TouchableOpacity>
-          </View>
+                <Icon
+                  name="arrow-up"
+                  size={20}
+                  color={
+                    transactionType === 'income'
+                      ? colors.success
+                      : colors.text.secondary
+                  }
+                />
+                <Text
+                  style={[
+                    styles.typeText,
+                    {
+                      color:
+                        transactionType === 'income'
+                          ? colors.success
+                          : colors.text.secondary,
+                    },
+                  ]}
+                >
+                  Доход
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+
+          {/* Информация о связанной цели для транзакций накопления */}
+          {isSavingsTransaction && linkedGoalId && (
+            <View
+              style={[
+                styles.goalInfoContainer,
+                {
+                  backgroundColor: colors.background,
+                  borderColor: colors.primary,
+                },
+              ]}
+            >
+              <Icon name="piggy-bank" size={24} color={colors.primary} />
+              <View style={styles.goalInfoTextContainer}>
+                <Text
+                  style={[
+                    styles.goalInfoLabel,
+                    { color: colors.text.secondary },
+                  ]}
+                >
+                  Связанная цель
+                </Text>
+                <Text
+                  style={[styles.goalInfoName, { color: colors.text.primary }]}
+                >
+                  {(async () => {
+                    if (linkedGoalId) {
+                      const goal = await goalService.getGoalById(linkedGoalId);
+                      return goal?.name || 'Финансовая цель';
+                    }
+                    return 'Финансовая цель';
+                  })()}
+                </Text>
+              </View>
+            </View>
+          )}
 
           {/* Amount Input */}
           <View
@@ -364,24 +487,32 @@ export const EditTransactionScreen: React.FC<EditTransactionScreenProps> = ({
             </Text>
           </View>
 
-          {/* Note Input */}
-          <View
-            style={[styles.noteContainer, { backgroundColor: colors.surface }]}
-          >
-            <Icon name="pencil" size={20} color={colors.text.secondary} />
-            <TextInput
-              style={[styles.noteInput, { color: colors.text.primary }]}
-              placeholder="Добавить заметку (необязательно)"
-              placeholderTextColor={colors.text.secondary}
-              value={note}
-              onChangeText={setNote}
-              maxLength={50}
-              editable={!isSaving}
-            />
-          </View>
+          {/* Note Input - скрыт для транзакций накопления */}
+          {!isSavingsTransaction && (
+            <View
+              style={[
+                styles.noteContainer,
+                { backgroundColor: colors.surface },
+              ]}
+            >
+              {selectedCategoryName !== 'Накопления' ? (
+                <Icon name="pencil" size={20} color={colors.text.secondary} />
+              ) : null}
+              <TextInput
+                style={[styles.noteInput, { color: colors.text.primary }]}
+                placeholder="Добавить заметку (необязательно)"
+                placeholderTextColor={colors.text.secondary}
+                value={note}
+                onChangeText={setNote}
+                maxLength={150}
+                editable={!isSaving && selectedCategoryName !== 'Накопления'}
+                multiline
+              />
+            </View>
+          )}
 
-          {/* Recurring Switch - ТОЛЬКО ДЛЯ ДОХОДОВ */}
-          {transactionType === 'income' && (
+          {/* Recurring Switch - ТОЛЬКО ДЛЯ ДОХОДОВ и не для накоплений */}
+          {transactionType === 'income' && !isSavingsTransaction && (
             <View
               style={[
                 styles.recurringContainer,
@@ -391,7 +522,7 @@ export const EditTransactionScreen: React.FC<EditTransactionScreenProps> = ({
               <View style={styles.recurringHeader}>
                 <View style={styles.recurringIconContainer}>
                   <Icon
-                    name={isRecurring ? 'calendar-repeat' : 'calendar-blank'}
+                    name={'calendar-blank'}
                     size={20}
                     color={isRecurring ? colors.success : colors.text.secondary}
                   />
@@ -425,7 +556,6 @@ export const EditTransactionScreen: React.FC<EditTransactionScreenProps> = ({
                     постоянных поступлений.
                   </Text>
 
-                  {/* Periodicity Selection */}
                   <View style={styles.periodicityContainer}>
                     <Text
                       style={[
@@ -516,7 +646,6 @@ export const EditTransactionScreen: React.FC<EditTransactionScreenProps> = ({
                     </View>
                   </View>
 
-                  {/* Info about next occurrence */}
                   <View
                     style={[
                       styles.infoBox,
@@ -541,40 +670,55 @@ export const EditTransactionScreen: React.FC<EditTransactionScreenProps> = ({
             </View>
           )}
 
-          {/* Category Selector */}
-          <CategorySelector
-            categories={categories}
-            selectedCategoryId={selectedCategoryId}
-            onSelectCategory={setSelectedCategoryId}
-            type={transactionType}
-          />
-
-          {/* Date Picker */}
-          <TouchableOpacity
-            style={[styles.dateContainer, { backgroundColor: colors.surface }]}
-            onPress={() => setShowDatePicker(true)}
-            disabled={isSaving}
-          >
-            <Icon name="calendar" size={20} color={colors.text.secondary} />
-            <Text style={[styles.dateText, { color: colors.text.primary }]}>
-              {date.toLocaleDateString('ru-RU')}
-            </Text>
-            <Icon name="chevron-down" size={20} color={colors.text.secondary} />
-          </TouchableOpacity>
-
-          {showDatePicker && (
-            <DateTimePicker
-              value={date}
-              mode="date"
-              locale="ru-RU"
-              onChange={(event, selectedDate) => {
-                setShowDatePicker(false);
-                if (selectedDate) {
-                  setDate(selectedDate);
-                }
-              }}
+          {/* Category Selector - скрыт для транзакций накопления */}
+          {!isSavingsTransaction && (
+            <CategorySelector
+              categories={categories}
+              selectedCategoryId={selectedCategoryId}
+              selectedCategoryName={selectedCategoryName}
+              onSelectCategory={setSelectedCategoryId}
+              type={transactionType}
+              selectable={selectedCategoryName !== 'Накопления'}
             />
           )}
+
+          {/* Date Picker */}
+          {!isSavingsTransaction && selectedCategoryName !== 'Накопления' ? (
+            <>
+              <TouchableOpacity
+                style={[
+                  styles.dateContainer,
+                  { backgroundColor: colors.surface },
+                ]}
+                onPress={() => setShowDatePicker(true)}
+                disabled={isSaving}
+              >
+                <Icon name="calendar" size={20} color={colors.text.secondary} />
+                <Text style={[styles.dateText, { color: colors.text.primary }]}>
+                  {date.toLocaleDateString('ru-RU')}
+                </Text>
+                <Icon
+                  name="chevron-down"
+                  size={20}
+                  color={colors.text.secondary}
+                />
+              </TouchableOpacity>
+
+              {showDatePicker && (
+                <DateTimePicker
+                  value={date}
+                  mode="date"
+                  locale="ru-RU"
+                  onChange={(event, selectedDate) => {
+                    setShowDatePicker(false);
+                    if (selectedDate) {
+                      setDate(selectedDate);
+                    }
+                  }}
+                />
+              )}
+            </>
+          ) : null}
         </ScrollView>
       </KeyboardAvoidingView>
       {/* Save Button */}
@@ -683,6 +827,28 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     padding: 0,
+  },
+  goalInfoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 8,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 12,
+  },
+  goalInfoTextContainer: {
+    flex: 1,
+  },
+  goalInfoLabel: {
+    fontSize: 12,
+    marginBottom: 2,
+  },
+  goalInfoName: {
+    fontSize: 16,
+    fontWeight: '600',
   },
   recurringContainer: {
     marginHorizontal: 16,

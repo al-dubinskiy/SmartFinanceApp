@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb';
 
 export const schema = appSchema({
-  version: 1,
+  version: 2,
   tables: [
     // Категории транзакций
     tableSchema({
@@ -32,6 +32,7 @@ export const schema = appSchema({
         { name: 'recurring_type', type: 'string', isOptional: true }, // 'daily' | 'weekly' | 'monthly' | 'yearly'
         { name: 'location', type: 'string', isOptional: true },
         // { name: 'attachments', type: 'string', isOptional: true }, // JSON string
+        { name: 'goal_id', type: 'string', isOptional: true },
         { name: 'created_at', type: 'number' },
         { name: 'updated_at', type: 'number' },
       ],

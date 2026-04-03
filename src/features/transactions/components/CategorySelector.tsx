@@ -28,20 +28,27 @@ interface Category {
 interface CategorySelectorProps {
   categories: Category[];
   selectedCategoryId: string | null;
+  selectedCategoryName: string | null;
   onSelectCategory: (categoryId: string) => void;
   type: 'income' | 'expense';
+  selectable?: boolean;
 }
 
 // Включаем LayoutAnimation для Android
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+if (
+  Platform.OS === 'android' &&
+  UIManager.setLayoutAnimationEnabledExperimental
+) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
 export const CategorySelector: React.FC<CategorySelectorProps> = ({
   categories,
   selectedCategoryId,
+  selectedCategoryName,
   onSelectCategory,
   type,
+  selectable = true,
 }) => {
   const { colors } = useTheme();
   const [modalVisible, setModalVisible] = useState(false);
@@ -53,14 +60,17 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
   const categoryRefs = useRef<Map<string, View>>(new Map());
 
   // Функция для получения всех родительских ID категории
-  const getParentIds = (categoryId: string, categoryMap: Map<string, any>): string[] => {
+  const getParentIds = (
+    categoryId: string,
+    categoryMap: Map<string, any>,
+  ): string[] => {
     const parents: string[] = [];
     let currentId = categoryId;
-    
+
     while (currentId) {
       const category = categoryMap.get(currentId);
       if (!category) break;
-      
+
       const parentId = category._raw?.parentId || category.parentId;
       if (parentId && parentId !== '' && parentId !== 'null') {
         parents.unshift(parentId);
@@ -69,7 +79,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
         break;
       }
     }
-    
+
     return parents;
   };
 
@@ -91,7 +101,9 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
   };
 
   const categoryMap = buildCategoryMap(categories);
-  const selectedCategory = selectedCategoryId ? categoryMap.get(selectedCategoryId)?._raw : null;
+  const selectedCategory = selectedCategoryId
+    ? categoryMap.get(selectedCategoryId)?._raw
+    : null;
 
   // Функция для раскрытия всех родителей выбранной категории
   const expandParents = (categoryId: string) => {
@@ -106,19 +118,23 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
   // Прокрутка к выбранной категории
   const scrollToSelectedCategory = () => {
     if (!selectedCategoryId) return;
-    
+
     // Немного задерживаем, чтобы анимация раскрытия успела завершиться
     setTimeout(() => {
       const ref = categoryRefs.current.get(selectedCategoryId);
       if (ref && scrollViewRef.current) {
-        ref.measureLayout(scrollViewRef.current as any, (x, y) => {
-          scrollViewRef.current?.scrollTo({
-            y: y - 100, // Отступ сверху
-            animated: true,
-          });
-        }, () => {
-          console.log('Failed to measure layout');
-        });
+        ref.measureLayout(
+          scrollViewRef.current as any,
+          (x, y) => {
+            scrollViewRef.current?.scrollTo({
+              y: y - 100, // Отступ сверху
+              animated: true,
+            });
+          },
+          () => {
+            console.log('Failed to measure layout');
+          },
+        );
       }
     }, 300);
   };
@@ -143,7 +159,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
       items.map(item => parseCategory(item));
 
     const parsedCategories = parseCategoriesRecursive(flatCategories);
-    
+
     const sortByOrder = (items: Category[]): Category[] => {
       return items.sort((a, b) => (a.order || 0) - (b.order || 0));
     };
@@ -346,6 +362,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
       <TouchableOpacity
         style={[styles.selector, { backgroundColor: colors.surface }]}
         onPress={() => setModalVisible(true)}
+        disabled={!selectable}
       >
         {selectedCategory ? (
           <>
@@ -372,7 +389,9 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
             Выберите категорию
           </Text>
         )}
-        <Icon name="chevron-down" size={20} color={colors.text.secondary} />
+        {selectable ? (
+          <Icon name="chevron-down" size={20} color={colors.text.secondary} />
+        ) : null}
       </TouchableOpacity>
 
       <Modal

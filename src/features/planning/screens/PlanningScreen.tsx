@@ -19,11 +19,19 @@ import { BudgetCard } from '../components/BudgetCard';
 import { GoalCard } from '../components/GoalCard';
 import { AddBudgetModal } from '../components/AddBudgetModal';
 import { AddGoalModal } from '../components/AddGoalModal';
+import { EditBudgetModal } from '../components/EditBudgetModal';
+import { EditGoalModal } from '../components/EditGoalModal';
+import { useIsFocused } from '@react-navigation/native';
+import { AddFundsModal } from '../components/AddFundsModal';
+
+type TabType = 'budgets' | 'goals';
 
 export const PlanningScreen: React.FC<MainTabScreenProps<'Planning'>> = () => {
   const { colors } = useTheme();
-  const { user } = useAppSelector((state) => state.auth);
-  
+  const isFocused = useIsFocused();
+  const { user } = useAppSelector(state => state.auth);
+
+  const [activeTab, setActiveTab] = useState<TabType>('budgets');
   const [budgets, setBudgets] = useState<any[]>([]);
   const [goals, setGoals] = useState<any[]>([]);
   const [completedGoals, setCompletedGoals] = useState<any[]>([]);
@@ -31,17 +39,23 @@ export const PlanningScreen: React.FC<MainTabScreenProps<'Planning'>> = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showAddBudget, setShowAddBudget] = useState(false);
   const [showAddGoal, setShowAddGoal] = useState(false);
+  const [showEditBudget, setShowEditBudget] = useState(false);
+  const [showEditGoal, setShowEditGoal] = useState(false);
+  const [editingBudget, setEditingBudget] = useState<any>(null);
+  const [editingGoal, setEditingGoal] = useState<any>(null);
+  const [showAddFunds, setShowAddFunds] = useState(false);
+  const [selectedGoalForFunds, setSelectedGoalForFunds] = useState<any>(null);
 
   const loadData = useCallback(async () => {
     try {
       // Загружаем бюджеты с прогрессом
       const budgetsProgress = await budgetService.getBudgetsProgress();
-      setBudgets(budgetsProgress);
+      setBudgets(budgetsProgress.reverse());
 
       // Загружаем цели
       const activeGoals = await goalService.getActiveGoals();
       const completed = await goalService.getCompletedGoals();
-      
+
       setGoals(activeGoals);
       setCompletedGoals(completed);
     } catch (error) {
@@ -54,11 +68,21 @@ export const PlanningScreen: React.FC<MainTabScreenProps<'Planning'>> = () => {
 
   useEffect(() => {
     loadData();
-  }, [loadData]);
+  }, [loadData, isFocused]);
 
   const handleRefresh = () => {
     setIsRefreshing(true);
     loadData();
+  };
+
+  const handleEditBudget = (budget: any) => {
+    setEditingBudget(budget);
+    setShowEditBudget(true);
+  };
+
+  const handleEditGoal = (goal: any) => {
+    setEditingGoal(goal);
+    setShowEditGoal(true);
   };
 
   const handleDeleteBudget = (budgetId: string) => {
@@ -79,64 +103,208 @@ export const PlanningScreen: React.FC<MainTabScreenProps<'Planning'>> = () => {
             }
           },
         },
-      ]
+      ],
     );
   };
 
   const handleDeleteGoal = (goalId: string) => {
-    Alert.alert(
-      'Удаление цели',
-      'Вы уверены, что хотите удалить эту цель?',
-      [
-        { text: 'Отмена', style: 'cancel' },
-        {
-          text: 'Удалить',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await goalService.deleteGoal(goalId);
-              await loadData();
-            } catch (error) {
-              Alert.alert('Ошибка', 'Не удалось удалить цель');
-            }
-          },
+    Alert.alert('Удаление цели', 'Вы уверены, что хотите удалить эту цель?', [
+      { text: 'Отмена', style: 'cancel' },
+      {
+        text: 'Удалить',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await goalService.deleteGoal(goalId);
+            await loadData();
+          } catch (error) {
+            Alert.alert('Ошибка', 'Не удалось удалить цель');
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
-  const handleAddToGoal = (goalId: string) => {
-    Alert.prompt(
-      'Добавить средства',
-      'Введите сумму для пополнения:',
-      [
-        { text: 'Отмена', style: 'cancel' },
-        {
-          text: 'Добавить',
-          onPress: async (amount) => {
-            const numericAmount = parseFloat(amount || '0');
-            if (isNaN(numericAmount) || numericAmount <= 0) {
-              Alert.alert('Ошибка', 'Введите корректную сумму');
-              return;
-            }
-            try {
-              await goalService.addToGoal(goalId, numericAmount);
-              await loadData();
-            } catch (error) {
-              Alert.alert('Ошибка', 'Не удалось добавить средства');
-            }
-          },
-        },
-      ],
-      'plain-text',
-      '',
-      'numeric'
-    );
+  const handleAddToGoal = (goal: any) => {
+    setSelectedGoalForFunds(goal);
+    setShowAddFunds(true);
+  };
+
+  const handleConfirmAddFunds = async (amount: number, note?: string) => {
+    if (selectedGoalForFunds) {
+      await goalService.addToGoal(selectedGoalForFunds.id, amount, note, true);
+      await loadData();
+    }
   };
 
   const totalBudget = budgets.reduce((sum, b) => sum + b.budget.amount, 0);
   const totalSpent = budgets.reduce((sum, b) => sum + b.spent, 0);
   const totalRemaining = totalBudget - totalSpent;
+
+  const renderBudgetsTab = () => (
+    <>
+      {/* Сводка по бюджетам */}
+      <View style={styles.summaryContainer}>
+        <View style={[styles.summaryCard, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.summaryLabel, { color: colors.text.secondary }]}>
+            Общий бюджет
+          </Text>
+          <Text style={[styles.summaryAmount, { color: colors.text.primary }]}>
+            {formatCurrency(totalBudget, user?.currency || 'RUB')}
+          </Text>
+        </View>
+
+        <View style={[styles.summaryCard, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.summaryLabel, { color: colors.text.secondary }]}>
+            Потрачено
+          </Text>
+          <Text style={[styles.summaryAmount, { color: colors.error }]}>
+            {formatCurrency(totalSpent, user?.currency || 'RUB')}
+          </Text>
+        </View>
+
+        <View style={[styles.summaryCard, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.summaryLabel, { color: colors.text.secondary }]}>
+            Осталось
+          </Text>
+          <Text
+            style={[
+              styles.summaryAmount,
+              { color: totalRemaining >= 0 ? colors.success : colors.error },
+            ]}
+          >
+            {formatCurrency(totalRemaining, user?.currency || 'RUB')}
+          </Text>
+        </View>
+      </View>
+
+      {/* Кнопка добавления бюджета */}
+      <View style={styles.addButtonContainer}>
+        <TouchableOpacity
+          style={[styles.addButtonLarge, { backgroundColor: colors.primary }]}
+          onPress={() => setShowAddBudget(true)}
+        >
+          <Icon name="plus" size={20} color="#FFFFFF" />
+          <Text style={styles.addButtonLargeText}>Добавить бюджет</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Список бюджетов */}
+      {budgets.length === 0 ? (
+        <View style={[styles.emptyContainer, { backgroundColor: colors.surface }]}>
+          <Icon name="chart-bell-curve" size={64} color={colors.text.secondary} />
+          <Text style={[styles.emptyTitle, { color: colors.text.primary }]}>
+            Пока нет бюджетов
+          </Text>
+          <Text style={[styles.emptyText, { color: colors.text.secondary }]}>
+            Создайте бюджеты для отслеживания расходов
+          </Text>
+          <TouchableOpacity
+            style={[styles.emptyButton, { backgroundColor: colors.primary }]}
+            onPress={() => setShowAddBudget(true)}
+          >
+            <Text style={styles.emptyButtonText}>Создать бюджет</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        budgets.map(item => (
+          <BudgetCard
+            key={item.budget.id}
+            categoryName={item.category?.name || 'Неизвестно'}
+            categoryIcon={item.category?.icon || 'help'}
+            categoryColor={item.category?.color || colors.primary}
+            budgetAmount={item.budget.amount}
+            spent={item.spent}
+            remaining={item.remaining}
+            percentage={item.percentage}
+            status={item.status}
+            currency={user?.currency || 'RUB'}
+            onEdit={() => handleEditBudget(item)}
+            onDelete={() => handleDeleteBudget(item.budget.id)}
+          />
+        ))
+      )}
+    </>
+  );
+
+  const renderGoalsTab = () => (
+    <>
+      {/* Кнопка добавления цели */}
+      <View style={styles.addButtonContainer}>
+        <TouchableOpacity
+          style={[styles.addButtonLarge, { backgroundColor: colors.primary }]}
+          onPress={() => setShowAddGoal(true)}
+        >
+          <Icon name="plus" size={20} color="#FFFFFF" />
+          <Text style={styles.addButtonLargeText}>Добавить цель</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Список целей */}
+      {goals.length === 0 && completedGoals.length === 0 ? (
+        <View style={[styles.emptyContainer, { backgroundColor: colors.surface }]}>
+          <Icon name="target" size={64} color={colors.text.secondary} />
+          <Text style={[styles.emptyTitle, { color: colors.text.primary }]}>
+            Пока нет целей
+          </Text>
+          <Text style={[styles.emptyText, { color: colors.text.secondary }]}>
+            Поставьте финансовые цели для мотивации
+          </Text>
+          <TouchableOpacity
+            style={[styles.emptyButton, { backgroundColor: colors.primary }]}
+            onPress={() => setShowAddGoal(true)}
+          >
+            <Text style={styles.emptyButtonText}>Создать цель</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <>
+          {goals.map((goal: any) => (
+            <GoalCard
+              key={goal.id}
+              id={goal.id}
+              name={goal.name}
+              icon={goal.icon}
+              color={goal.color}
+              targetAmount={goal.targetAmount}
+              currentAmount={goal.currentAmount}
+              deadline={goal.deadline}
+              progress={goal.progress}
+              isCompleted={false}
+              currency={user?.currency || 'RUB'}
+              onAdd={() => handleAddToGoal(goal)}
+              onEdit={() => handleEditGoal(goal)}
+              onDelete={() => handleDeleteGoal(goal.id)}
+            />
+          ))}
+
+          {completedGoals.length > 0 && (
+            <View style={styles.completedSection}>
+              <Text style={[styles.completedTitle, { color: colors.text.secondary }]}>
+                Выполненные цели
+              </Text>
+              {completedGoals.map((goal: any) => (
+                <GoalCard
+                  key={goal.id}
+                  id={goal.id}
+                  name={goal.name}
+                  icon={goal.icon}
+                  color={goal.color}
+                  targetAmount={goal.targetAmount}
+                  currentAmount={goal.currentAmount}
+                  deadline={goal.deadline}
+                  progress={goal.progress}
+                  isCompleted={true}
+                  currency={user?.currency || 'RUB'}
+                  onDelete={() => handleDeleteGoal(goal.id)}
+                />
+              ))}
+            </View>
+          )}
+        </>
+      )}
+    </>
+  );
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -151,179 +319,122 @@ export const PlanningScreen: React.FC<MainTabScreenProps<'Planning'>> = () => {
           />
         }
       >
-        {/* Сводка по бюджетам */}
-        <View style={styles.summaryContainer}>
-          <View style={[styles.summaryCard, { backgroundColor: colors.surface }]}>
-            <Text style={[styles.summaryLabel, { color: colors.text.secondary }]}>
-              Общий бюджет
-            </Text>
-            <Text style={[styles.summaryAmount, { color: colors.text.primary }]}>
-              {formatCurrency(totalBudget, user?.currency || 'RUB')}
-            </Text>
-          </View>
-          
-          <View style={[styles.summaryCard, { backgroundColor: colors.surface }]}>
-            <Text style={[styles.summaryLabel, { color: colors.text.secondary }]}>
-              Потрачено
-            </Text>
-            <Text style={[styles.summaryAmount, { color: colors.error }]}>
-              {formatCurrency(totalSpent, user?.currency || 'RUB')}
-            </Text>
-          </View>
-          
-          <View style={[styles.summaryCard, { backgroundColor: colors.surface }]}>
-            <Text style={[styles.summaryLabel, { color: colors.text.secondary }]}>
-              Осталось
-            </Text>
+        {/* Segmented Control */}
+        <View style={styles.segmentedContainer}>
+          <TouchableOpacity
+            style={[
+              styles.segmentButton,
+              activeTab === 'budgets' && {
+                backgroundColor: colors.primary,
+              },
+            ]}
+            onPress={() => setActiveTab('budgets')}
+          >
+            <Icon
+              name="chart-bell-curve"
+              size={18}
+              color={activeTab === 'budgets' ? '#FFFFFF' : colors.text.secondary}
+            />
             <Text
               style={[
-                styles.summaryAmount,
-                { color: totalRemaining >= 0 ? colors.success : colors.error },
+                styles.segmentText,
+                {
+                  color: activeTab === 'budgets' ? '#FFFFFF' : colors.text.secondary,
+                },
               ]}
             >
-              {formatCurrency(totalRemaining, user?.currency || 'RUB')}
+              Бюджеты
             </Text>
-          </View>
-        </View>
-
-        {/* Раздел бюджетов */}
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
-            Месячные бюджеты
-          </Text>
-          <TouchableOpacity
-            style={[styles.addButton, { backgroundColor: colors.primary }]}
-            onPress={() => setShowAddBudget(true)}
-          >
-            <Icon name="plus" size={20} color="#FFFFFF" />
-            <Text style={styles.addButtonText}>Добавить бюджет</Text>
           </TouchableOpacity>
-        </View>
 
-        {budgets.length === 0 ? (
-          <View style={[styles.emptyContainer, { backgroundColor: colors.surface }]}>
-            <Icon name="chart-bell-curve" size={64} color={colors.text.secondary} />
-            <Text style={[styles.emptyTitle, { color: colors.text.primary }]}>
-              Пока нет бюджетов
-            </Text>
-            <Text style={[styles.emptyText, { color: colors.text.secondary }]}>
-              Создайте бюджеты для отслеживания расходов
-            </Text>
-            <TouchableOpacity
-              style={[styles.emptyButton, { backgroundColor: colors.primary }]}
-              onPress={() => setShowAddBudget(true)}
-            >
-              <Text style={styles.emptyButtonText}>Создать бюджет</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          budgets.map((item) => (
-            <BudgetCard
-              key={item.budget.id}
-              categoryName={item.category?.name || 'Неизвестно'}
-              categoryIcon={item.category?.icon || 'help'}
-              categoryColor={item.category?.color || colors.primary}
-              budgetAmount={item.budget.amount}
-              spent={item.spent}
-              remaining={item.remaining}
-              percentage={item.percentage}
-              status={item.status}
-              currency={user?.currency || 'RUB'}
-              onDelete={() => handleDeleteBudget(item.budget.id)}
+          <TouchableOpacity
+            style={[
+              styles.segmentButton,
+              activeTab === 'goals' && {
+                backgroundColor: colors.primary,
+              },
+            ]}
+            onPress={() => setActiveTab('goals')}
+          >
+            <Icon
+              name="target"
+              size={18}
+              color={activeTab === 'goals' ? '#FFFFFF' : colors.text.secondary}
             />
-          ))
-        )}
-
-        {/* Раздел целей */}
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
-            Финансовые цели
-          </Text>
-          <TouchableOpacity
-            style={[styles.addButton, { backgroundColor: colors.primary }]}
-            onPress={() => setShowAddGoal(true)}
-          >
-            <Icon name="plus" size={20} color="#FFFFFF" />
-            <Text style={styles.addButtonText}>Добавить цель</Text>
+            <Text
+              style={[
+                styles.segmentText,
+                {
+                  color: activeTab === 'goals' ? '#FFFFFF' : colors.text.secondary,
+                },
+              ]}
+            >
+              Цели
+            </Text>
           </TouchableOpacity>
         </View>
 
-        {goals.length === 0 && completedGoals.length === 0 ? (
-          <View style={[styles.emptyContainer, { backgroundColor: colors.surface }]}>
-            <Icon name="target" size={64} color={colors.text.secondary} />
-            <Text style={[styles.emptyTitle, { color: colors.text.primary }]}>
-              Пока нет целей
-            </Text>
-            <Text style={[styles.emptyText, { color: colors.text.secondary }]}>
-              Поставьте финансовые цели для мотивации
-            </Text>
-            <TouchableOpacity
-              style={[styles.emptyButton, { backgroundColor: colors.primary }]}
-              onPress={() => setShowAddGoal(true)}
-            >
-              <Text style={styles.emptyButtonText}>Создать цель</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <>
-            {goals.map((goal: any) => (
-              <GoalCard
-                key={goal.id}
-                id={goal.id}
-                name={goal.name}
-                icon={goal.icon}
-                color={goal.color}
-                targetAmount={goal.targetAmount}
-                currentAmount={goal.currentAmount}
-                deadline={goal.deadline}
-                progress={goal.progress}
-                isCompleted={false}
-                currency={user?.currency || 'RUB'}
-                onAdd={() => handleAddToGoal(goal.id)}
-                onDelete={() => handleDeleteGoal(goal.id)}
-              />
-            ))}
-            
-            {completedGoals.length > 0 && (
-              <View style={styles.completedSection}>
-                <Text style={[styles.completedTitle, { color: colors.text.secondary }]}>
-                  Выполненные цели
-                </Text>
-                {completedGoals.map((goal: any) => (
-                  <GoalCard
-                    key={goal.id}
-                    id={goal.id}
-                    name={goal.name}
-                    icon={goal.icon}
-                    color={goal.color}
-                    targetAmount={goal.targetAmount}
-                    currentAmount={goal.currentAmount}
-                    deadline={goal.deadline}
-                    progress={goal.progress}
-                    isCompleted={true}
-                    currency={user?.currency || 'RUB'}
-                    onDelete={() => handleDeleteGoal(goal.id)}
-                  />
-                ))}
-              </View>
-            )}
-          </>
-        )}
+        {/* Контент активной вкладки */}
+        {activeTab === 'budgets' ? renderBudgetsTab() : renderGoalsTab()}
 
         <View style={styles.bottomSpacing} />
       </ScrollView>
 
-      <AddBudgetModal
-        visible={showAddBudget}
-        onClose={() => setShowAddBudget(false)}
-        onSuccess={loadData}
-      />
+      {/* Модальные окна */}
+      {showAddBudget && (
+        <AddBudgetModal
+          visible={showAddBudget}
+          onClose={() => setShowAddBudget(false)}
+          onSuccess={loadData}
+        />
+      )}
 
-      <AddGoalModal
-        visible={showAddGoal}
-        onClose={() => setShowAddGoal(false)}
-        onSuccess={loadData}
-      />
+      {showAddGoal && (
+        <AddGoalModal
+          visible={showAddGoal}
+          onClose={() => setShowAddGoal(false)}
+          onSuccess={loadData}
+        />
+      )}
+
+      {showEditBudget && (
+        <EditBudgetModal
+          visible={showEditBudget}
+          budget={editingBudget}
+          onClose={() => {
+            setShowEditBudget(false);
+            setEditingBudget(null);
+          }}
+          onSuccess={loadData}
+        />
+      )}
+
+      {showEditGoal && (
+        <EditGoalModal
+          visible={showEditGoal}
+          goal={editingGoal}
+          onClose={() => {
+            setShowEditGoal(false);
+            setEditingGoal(null);
+          }}
+          onSuccess={loadData}
+        />
+      )}
+
+      {showAddFunds && (
+        <AddFundsModal
+          visible={showAddFunds}
+          goalName={selectedGoalForFunds?.name || ''}
+          goalCurrentAmount={selectedGoalForFunds?.currentAmount || 0}
+          goalTargetAmount={selectedGoalForFunds?.targetAmount || 0}
+          currency={user?.currency || 'RUB'}
+          onClose={() => {
+            setShowAddFunds(false);
+            setSelectedGoalForFunds(null);
+          }}
+          onConfirm={handleConfirmAddFunds}
+        />
+      )}
     </View>
   );
 };
@@ -341,6 +452,28 @@ const formatCurrency = (amount: number, currency: string) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  segmentedContainer: {
+    flexDirection: 'row',
+    marginHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 8,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    padding: 4,
+  },
+  segmentButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 8,
+    gap: 8,
+  },
+  segmentText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   summaryContainer: {
     flexDirection: 'row',
@@ -363,29 +496,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  addButtonContainer: {
     paddingHorizontal: 16,
-    marginTop: 24,
-    marginBottom: 12,
+    marginVertical: 12,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  addButton: {
+  addButtonLarge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    gap: 4,
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 8,
   },
-  addButtonText: {
+  addButtonLargeText: {
     color: '#FFFFFF',
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '600',
   },
   emptyContainer: {

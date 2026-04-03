@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import FontAwesome6Icon from 'react-native-vector-icons/FontAwesome6';
 import { useTheme } from '../../../core/hooks/useTheme';
 import { useAppSelector, useAppDispatch } from '../../../store/hooks';
 import { logout } from '../../../store/slices/authSlice';
@@ -144,11 +145,21 @@ export const ProfileScreen = () => {
       activeOpacity={0.7}
     >
       <View style={styles.settingLeft}>
-        <Icon
-          name={icon}
-          size={24}
-          color={danger ? colors.error : colors.primary}
-        />
+        {icon !== 'file-csv' ? (
+          <Icon
+            name={icon}
+            size={24}
+            color={danger ? colors.error : colors.primary}
+          />
+        ) : (
+          <FontAwesome6Icon
+            name={icon}
+            size={20}
+            style={{marginLeft: 4}}
+            color={danger ? colors.error : colors.primary}
+          />
+        )}
+
         <Text
           style={[
             styles.settingText,

@@ -19,6 +19,7 @@ interface GoalCardProps {
   onPress?: () => void;
   onAdd?: () => void;
   onDelete?: () => void;
+  onEdit?: () => void;
 }
 
 export const GoalCard: React.FC<GoalCardProps> = ({
@@ -34,6 +35,7 @@ export const GoalCard: React.FC<GoalCardProps> = ({
   onPress,
   onAdd,
   onDelete,
+  onEdit,
 }) => {
   const { colors } = useTheme();
 
@@ -70,10 +72,7 @@ export const GoalCard: React.FC<GoalCardProps> = ({
       <View style={styles.header}>
         <View style={styles.titleContainer}>
           <View
-            style={[
-              styles.iconContainer,
-              { backgroundColor: color + '20' },
-            ]}
+            style={[styles.iconContainer, { backgroundColor: color + '20' }]}
           >
             <Icon name={icon} size={24} color={color} />
           </View>
@@ -86,12 +85,20 @@ export const GoalCard: React.FC<GoalCardProps> = ({
             </Text>
           </View>
         </View>
-        
-        {onDelete && !isCompleted && (
-          <TouchableOpacity onPress={onDelete} style={styles.deleteButton}>
-            <Icon name="delete" size={20} color={colors.text.secondary} />
-          </TouchableOpacity>
-        )}
+
+        <View style={styles.actions}>
+          {onEdit && (
+            <TouchableOpacity onPress={onEdit} style={styles.actionButton}>
+              <Icon name="pencil" size={20} color={colors.text.secondary} />
+            </TouchableOpacity>
+          )}
+
+          {onDelete && !isCompleted && (
+            <TouchableOpacity onPress={onDelete} style={styles.actionButton}>
+              <Icon name="delete" size={20} color={colors.text.secondary} />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       <ProgressBar progress={progress} status="good" />
@@ -105,7 +112,7 @@ export const GoalCard: React.FC<GoalCardProps> = ({
             {formatCurrency(currentAmount, currency)}
           </Text>
         </View>
-        
+
         <View style={styles.statItem}>
           <Text style={[styles.statLabel, { color: colors.text.secondary }]}>
             Осталось
@@ -120,8 +127,14 @@ export const GoalCard: React.FC<GoalCardProps> = ({
         <>
           {remainingDays && remainingDays > 0 && (
             <View style={styles.deadlineContainer}>
-              <Icon name="calendar-clock" size={16} color={colors.text.secondary} />
-              <Text style={[styles.deadlineText, { color: colors.text.secondary }]}>
+              <Icon
+                name="calendar-clock"
+                size={16}
+                color={colors.text.secondary}
+              />
+              <Text
+                style={[styles.deadlineText, { color: colors.text.secondary }]}
+              >
                 Осталось {remainingDays} {getDaysWord(remainingDays)}
               </Text>
             </View>
@@ -130,8 +143,14 @@ export const GoalCard: React.FC<GoalCardProps> = ({
           {getDailyRecommendation() && (
             <View style={styles.recommendationContainer}>
               <Icon name="lightbulb" size={16} color={colors.primary} />
-              <Text style={[styles.recommendationText, { color: colors.text.secondary }]}>
-                Откладывайте {getDailyRecommendation()} в день, чтобы достичь цели вовремя
+              <Text
+                style={[
+                  styles.recommendationText,
+                  { color: colors.text.secondary },
+                ]}
+              >
+                Откладывайте {getDailyRecommendation()} в день, чтобы достичь
+                цели вовремя
               </Text>
             </View>
           )}
@@ -149,7 +168,9 @@ export const GoalCard: React.FC<GoalCardProps> = ({
       )}
 
       {isCompleted && (
-        <View style={[styles.completedBadge, { backgroundColor: colors.success }]}>
+        <View
+          style={[styles.completedBadge, { backgroundColor: colors.success }]}
+        >
           <Icon name="check-circle" size={20} color="#FFFFFF" />
           <Text style={styles.completedText}>Цель достигнута!</Text>
         </View>
@@ -161,7 +182,8 @@ export const GoalCard: React.FC<GoalCardProps> = ({
 // Вспомогательная функция для склонения слова "день"
 const getDaysWord = (days: number): string => {
   if (days % 10 === 1 && days % 100 !== 11) return 'день';
-  if (days % 10 >= 2 && days % 10 <= 4 && (days % 100 < 10 || days % 100 >= 20)) return 'дня';
+  if (days % 10 >= 2 && days % 10 <= 4 && (days % 100 < 10 || days % 100 >= 20))
+    return 'дня';
   return 'дней';
 };
 
@@ -177,6 +199,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 12,
+    gap: 70,
+    flex: 1
   },
   titleContainer: {
     flexDirection: 'row',
@@ -195,11 +219,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 2,
+    lineHeight: 25,
   },
   target: {
     fontSize: 12,
   },
-  deleteButton: {
+  actions: {
+    flexDirection: 'row',
+    gap: 2,
+  },
+  actionButton: {
     padding: 4,
   },
   stats: {

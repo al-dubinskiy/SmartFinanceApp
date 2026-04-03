@@ -16,6 +16,7 @@ export interface CreateTransactionDTO {
   isRecurring?: boolean;
   recurringType?: string | null;
   location?: string | null;
+  goalId?: string | null;
 }
 
 class TransactionService {
@@ -23,12 +24,8 @@ class TransactionService {
   async createTransaction(data: CreateTransactionDTO): Promise<Transaction> {
     return await database.write(async () => {
       const transactions = getTransactionsCollection();
-      const existingCount = await transactions.query().fetch();
-      //   const budgets = await database.get('budgets').query().fetch();
-      //  for (const item of [...budgets]) {
-      //   await item.destroyPermanently();
-      // }
       return await transactions.create((transaction: any) => {
+        console.log('dfdsfsdf', transaction)
         transaction.amount = data.amount;
         transaction.type = data.type;
         transaction.categoryId = data.categoryId;
@@ -37,7 +34,8 @@ class TransactionService {
         transaction.isRecurring = data.isRecurring || false;
         transaction.recurringType = data.recurringType || null;
         transaction.location = data.location || null;
-        transaction.attachments = [];
+        // transaction.attachments = [];
+        if (data.goalId !== undefined) transaction.goalId = data.goalId;
         // transaction.createdAt = Date.now();
         // transaction.updatedAt = Date.now();
       });
@@ -161,25 +159,25 @@ class TransactionService {
   }
 
   // Обновить транзакцию
-async updateTransaction(id: string, data: Partial<CreateTransactionDTO>) {
-  return await database.write(async () => {
-    const transactions = getTransactionsCollection();
-    const transaction = await transactions.find(id);
-    console.log('sfsfsdf', data)
-    return await transaction.update((record: any) => {
-      console.log('dfsdf', record)
-      if (data.amount !== undefined) record.amount = data.amount;
-      if (data.type !== undefined) record.type = data.type;
-      if (data.categoryId !== undefined) record.categoryId = data.categoryId;
-      if (data.note !== undefined) record.note = data.note;
-      if (data.date !== undefined) record.date = data.date;
-      if (data.location !== undefined) record.location = data.location;
-      if (data.isRecurring !== undefined) record.isRecurring = data.isRecurring;
-      if (data.recurringType !== undefined) record.recurringType = data.recurringType;
-      record.updatedAt = Date.now();
+  async updateTransaction(id: string, data: Partial<CreateTransactionDTO>) {
+    return await database.write(async () => {
+      const transactions = getTransactionsCollection();
+      const transaction = await transactions.find(id);
+      console.log('sdfsdfsdfd')
+      return await transaction.update((record: any) => {
+        if (data.amount !== undefined) record.amount = data.amount;
+        if (data.type !== undefined) record.type = data.type;
+        if (data.categoryId !== undefined) record.categoryId = data.categoryId;
+        if (data.note !== undefined) record.note = data.note;
+        if (data.date !== undefined) record.date = data.date;
+        if (data.location !== undefined) record.location = data.location;
+        if (data.isRecurring !== undefined) record.isRecurring = data.isRecurring;
+        if (data.recurringType !== undefined) record.recurringType = data.recurringType;
+        if (data.goalId !== undefined) record.goalId = data.goalId;
+        record.updatedAt = Date.now();
+      });
     });
-  });
-}
+  }
 
   // Получить баланс на определенную дату
   async getBalanceUntilDate(date: number) {

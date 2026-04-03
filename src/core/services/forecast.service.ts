@@ -827,7 +827,7 @@ class ForecastService {
 
   async predictCashFlowGaps(): Promise<CashFlowPrediction> {
     const now = new Date();
-    const currentBalance = await transactionService.getBalanceUntilDate(now.getTime());
+    const currentBalance = await transactionService.getTotalBalance();
     const avgDailySpending = await this.getAverageDailySpending(30);
     
     // Получаем ВСЕ будущие доходы (для прогноза баланса)

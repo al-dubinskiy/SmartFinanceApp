@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,8 +12,8 @@ import {
   Platform,
   Dimensions,
   Pressable,
-  Keyboard,
   TouchableWithoutFeedback,
+  Keyboard,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -178,7 +178,6 @@ const ICON_OPTIONS = [
   'fingerprint',
   'key',
 ];
-
 // Расширенная палитра цветов
 const COLOR_OPTIONS = [
   '#FF6B6B',
@@ -213,14 +212,16 @@ const COLOR_OPTIONS = [
   '#117A65',
 ];
 
-interface AddGoalModalProps {
+interface EditGoalModalProps {
   visible: boolean;
+  goal: any;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export const AddGoalModal: React.FC<AddGoalModalProps> = ({
+export const EditGoalModal: React.FC<EditGoalModalProps> = ({
   visible,
+  goal,
   onClose,
   onSuccess,
 }) => {
@@ -233,6 +234,17 @@ export const AddGoalModal: React.FC<AddGoalModalProps> = ({
   const [selectedColor, setSelectedColor] = useState('#FF6B6B');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (goal) {
+      setName(goal.name || '');
+      setTargetAmount(goal.targetAmount?.toString() || '');
+      setCurrentAmount(goal.currentAmount?.toString() || '');
+      setDeadline(goal.deadline ? new Date(goal.deadline) : null);
+      setSelectedIcon(goal.icon || 'piggy-bank');
+      setSelectedColor(goal.color || '#FF6B6B');
+    }
+  }, [goal]);
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -255,7 +267,7 @@ export const AddGoalModal: React.FC<AddGoalModalProps> = ({
 
     setIsLoading(true);
     try {
-      await goalService.createGoal({
+      await goalService.updateGoal(goal.id, {
         name: name.trim(),
         targetAmount: target,
         currentAmount: current,
@@ -266,23 +278,15 @@ export const AddGoalModal: React.FC<AddGoalModalProps> = ({
 
       onSuccess();
       onClose();
-      resetForm();
     } catch (error) {
-      Alert.alert('Ошибка', 'Не удалось создать цель');
+      Alert.alert('Ошибка', 'Не удалось обновить цель');
       console.error(error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const resetForm = () => {
-    setName('');
-    setTargetAmount('');
-    setCurrentAmount('');
-    setDeadline(null);
-    setSelectedIcon('piggy-bank');
-    setSelectedColor('#FF6B6B');
-  };
+  if (!goal) return null;
 
   return (
     <Modal
@@ -306,7 +310,7 @@ export const AddGoalModal: React.FC<AddGoalModalProps> = ({
 
             <View style={styles.header}>
               <Text style={[styles.title, { color: colors.text.primary }]}>
-                Создать цель
+                Редактировать цель
               </Text>
               <TouchableOpacity onPress={onClose} style={styles.closeButton}>
                 <Icon name="close" size={24} color={colors.text.secondary} />
@@ -317,7 +321,12 @@ export const AddGoalModal: React.FC<AddGoalModalProps> = ({
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.scrollContent}
             >
-              <Text style={[styles.label, { color: colors.text.secondary, marginTop: 0 }]}>
+              <Text
+                style={[
+                  styles.label,
+                  { color: colors.text.secondary, marginTop: 0 },
+                ]}
+              >
                 Название цели
               </Text>
               <TextInput
@@ -513,7 +522,7 @@ export const AddGoalModal: React.FC<AddGoalModalProps> = ({
                   <ActivityIndicator size="small" color="#FFFFFF" />
                 ) : (
                   <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>
-                    Создать
+                    Сохранить
                   </Text>
                 )}
               </TouchableOpacity>
@@ -618,6 +627,7 @@ const styles = StyleSheet.create({
   },
   iconButton: {
     width: '23.5%',
+    // aspectRatio: 1,
     height: 50,
     borderRadius: 12,
     justifyContent: 'center',
@@ -639,6 +649,8 @@ const styles = StyleSheet.create({
   buttonContainer: {
     flexDirection: 'row',
     gap: 12,
+    // marginTop: 20,
+    // marginBottom: Platform.OS === 'ios' ? 20 : 10,
   },
   button: {
     flex: 1,

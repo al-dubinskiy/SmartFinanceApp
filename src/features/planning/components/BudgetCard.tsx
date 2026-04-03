@@ -105,12 +105,12 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
 
       {status === 'exceeded' && (
         <Text style={[styles.warningText, { color: colors.error }]}>
-          ⚠️ Бюджет превышен на {formatCurrency(Math.abs(remaining), currency)}
+          ⚠️  Бюджет превышен на {formatCurrency(Math.abs(budgetAmount - spent), currency)}
         </Text>
       )}
       {status === 'warning' && (
         <Text style={[styles.warningText, { color: colors.warning }]}>
-          ⚠️ Близко к лимиту бюджета (осталось {(100 - percentage).toFixed(0)}%)
+          ⚠️  Близко к лимиту бюджета (осталось {(100 - percentage).toFixed(0)}%)
         </Text>
       )}
     </TouchableOpacity>
@@ -127,13 +127,16 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: 12,
+    gap: 70,
+    flex: 1
   },
   categoryInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    flex: 1
   },
   iconContainer: {
     width: 48,
@@ -152,7 +155,7 @@ const styles = StyleSheet.create({
   },
   actions: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 2
   },
   actionButton: {
     padding: 4,

@@ -461,7 +461,7 @@ export const ForecastCard: React.FC<ForecastCardProps> = ({
       </View>
 
       {/* Expand/Collapse */}
-      <View style={styles.expandSection}>
+      {/* <View style={styles.expandSection}>
         <TouchableOpacity
           style={styles.expandButton}
           onPress={() => setExpanded(!expanded)}
@@ -485,7 +485,7 @@ export const ForecastCard: React.FC<ForecastCardProps> = ({
             Как это работает?
           </Text>
         </TouchableOpacity>
-      </View>
+      </View> */}
 
       {/* Daily Breakdown */}
       {expanded && (
