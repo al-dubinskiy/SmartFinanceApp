@@ -8,16 +8,19 @@ import {
   Switch,
   Alert,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import FontAwesome6Icon from 'react-native-vector-icons/FontAwesome6';
+import { pick, types } from '@react-native-documents/picker';
+import Share from 'react-native-share';
+import RNFS from 'react-native-fs';
 import { useTheme } from '../../../core/hooks/useTheme';
 import { useAppSelector, useAppDispatch } from '../../../store/hooks';
 import { logout } from '../../../store/slices/authSlice';
 import {
   setTheme,
   setCurrency,
-  setBiometricsEnabled,
   setNotificationsEnabled,
   setLanguage,
 } from '../../../store/slices/settingsSlice';
@@ -37,9 +40,11 @@ export const ProfileScreen = () => {
   );
 
   const [hasPin, setHasPin] = useState(false);
+  const [isExportingJSON, setIsExportingJSON] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [showCSVImport, setShowCSVImport] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
 
   useEffect(() => {
     checkPinStatus();
@@ -72,43 +77,141 @@ export const ProfileScreen = () => {
   };
 
   const handleExportJSON = async () => {
-    setIsExporting(true);
+    setIsExportingJSON(true);
     try {
-      const filePath = await backupService.exportToJSON();
-      await backupService.shareFile(filePath);
-    } catch (error) {
-      Alert.alert('Ошибка', 'Не удалось экспортировать данные');
+      const { savePath, fileName } = await backupService.exportToJSON();
+
+      console.log('Файл создан по пути:', savePath);
+
+      // Проверяем существование файла
+      const fileExists = await RNFS.exists(savePath);
+      console.log('Файл существует:', fileExists);
+
+      if (!fileExists) {
+        throw new Error('Файл не был создан');
+      }
+      console.log('Резервная копия сохранена:', savePath);
+
+      // Показываем диалог с информацией о сохранении
+      Alert.alert(
+        '✅ Резервная копия создана',
+        `Файл сохранен в папку ${
+          Platform.OS === 'android' ? 'Download' : 'Documents'
+        }:\n${fileName}\n\nВы можете:\n• Отправить файл через мессенджер\n• Сохранить в облачное хранилище\n• Скопировать на компьютер`,
+        [
+          {
+            text: 'Отправить файл',
+            onPress: async () => {
+              try {
+                // Пытаемся отправить через Share
+                await Share.open({
+                  url:
+                    Platform.OS === 'android' ? savePath : `file://${savePath}`,
+                  type: 'application/json',
+                  title: 'Резервная копия SmartFinance',
+                });
+              } catch (shareError: any) {
+                if (shareError?.message !== 'User did not share') {
+                  Alert.alert(
+                    'Информация',
+                    `Файл находится по пути:\n${savePath}\n\nВы можете найти его в файловом менеджере.`,
+                  );
+                }
+              }
+            },
+          },
+          { text: 'OK' },
+        ],
+      );
+    } catch (error: any) {
+      if (error?.message !== 'User did not share') {
+        console.error('Export error:', error);
+        Alert.alert('Ошибка', 'Не удалось экспортировать данные');
+      }
     } finally {
-      setIsExporting(false);
+      setIsExportingJSON(false);
     }
+  };
+
+  const handleImportJSON = async () => {
+    Alert.alert(
+      'Восстановление из резервной копии',
+      'Это действие заменит все текущие данные. Убедитесь, что у вас есть резервная копия.\n\nВосстановление невозможно отменить.',
+      [
+        { text: 'Отмена', style: 'cancel' },
+        {
+          text: 'Выбрать файл',
+          onPress: async () => {
+            try {
+              const result = await pick({
+                type: [types.allFiles],
+              });
+
+              const fileUri = result[0].uri;
+
+              Alert.alert(
+                'Подтверждение восстановления',
+                'Все текущие данные будут заменены данными из резервной копии. Продолжить?',
+                [
+                  { text: 'Отмена', style: 'cancel' },
+                  {
+                    text: 'Восстановить',
+                    style: 'destructive',
+                    onPress: async () => {
+                      setIsImporting(true);
+                      try {
+                        const importResult = await backupService.importFromJSON(
+                          fileUri,
+                        );
+                        if (importResult.success) {
+                          Alert.alert('Успешно', importResult.message);
+                          // Перезагружаем данные после импорта
+                          navigation.replace('Main');
+                        } else {
+                          Alert.alert('Ошибка', importResult.message);
+                        }
+                      } catch (error) {
+                        Alert.alert(
+                          'Ошибка',
+                          'Не удалось восстановить данные из резервной копии',
+                        );
+                      } finally {
+                        setIsImporting(false);
+                      }
+                    },
+                  },
+                ],
+              );
+            } catch (error) {
+              Alert.alert('Ошибка', 'Не удалось выбрать файл');
+            }
+          },
+        },
+      ],
+    );
   };
 
   const handleExportCSV = async () => {
     setIsExporting(true);
     try {
       const filePath = await backupService.exportToCSV();
-      await backupService.shareFile(filePath);
-    } catch (error) {
-      Alert.alert('Ошибка', 'Не удалось экспортировать CSV');
+
+      await Share.open({
+        url: Platform.OS === 'android' ? `file://${filePath}` : filePath,
+        type: 'text/csv',
+        title: 'Экспорт транзакций SmartFinance',
+        message: 'Экспорт транзакций в формате CSV',
+      });
+
+      Alert.alert('Успешно', 'CSV файл готов к отправке');
+    } catch (error: any) {
+      if (error?.message !== 'User did not share') {
+        console.error('CSV export error:', error);
+        Alert.alert('Ошибка', 'Не удалось экспортировать CSV');
+      }
     } finally {
       setIsExporting(false);
     }
-  };
-
-  const handleImportBackup = async () => {
-    Alert.alert(
-      'Импорт резервной копии',
-      'Это действие заменит все текущие данные. Убедитесь, что у вас есть резервная копия.',
-      [
-        { text: 'Отмена', style: 'cancel' },
-        {
-          text: 'Продолжить',
-          onPress: async () => {
-            Alert.alert('Информация', 'Функция скоро будет доступна');
-          },
-        },
-      ],
-    );
   };
 
   const handleLogout = () => {
@@ -155,7 +258,7 @@ export const ProfileScreen = () => {
           <FontAwesome6Icon
             name={icon}
             size={20}
-            style={{marginLeft: 4}}
+            style={{ marginLeft: 4 }}
             color={danger ? colors.error : colors.primary}
           />
         )}
@@ -316,8 +419,8 @@ export const ProfileScreen = () => {
           <>
             {renderSettingItem(
               'download',
-              'Экспорт в JSON (резервная копия)',
-              isExporting ? (
+              'Резервная копия (JSON)',
+              isExportingJSON ? (
                 <ActivityIndicator size="small" color={colors.primary} />
               ) : (
                 <Icon
@@ -329,8 +432,22 @@ export const ProfileScreen = () => {
               handleExportJSON,
             )}
             {renderSettingItem(
+              'restore',
+              'Восстановить из резервной копии',
+              isImporting ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : (
+                <Icon
+                  name="chevron-right"
+                  size={20}
+                  color={colors.text.secondary}
+                />
+              ),
+              handleImportJSON,
+            )}
+            {renderSettingItem(
               'file-csv',
-              'Экспорт в CSV',
+              'Экспорт транзакций (CSV)',
               isExporting ? (
                 <ActivityIndicator size="small" color={colors.primary} />
               ) : (
@@ -351,16 +468,6 @@ export const ProfileScreen = () => {
                 color={colors.text.secondary}
               />,
               () => setShowCSVImport(true),
-            )}
-            {renderSettingItem(
-              'restore',
-              'Восстановить из резервной копии',
-              <Icon
-                name="chevron-right"
-                size={20}
-                color={colors.text.secondary}
-              />,
-              handleImportBackup,
             )}
             {renderSettingItem(
               'format-list-bulleted',
@@ -392,12 +499,12 @@ export const ProfileScreen = () => {
               />,
               () => {
                 Alert.alert(
-                  'Сброс данных',
+                  'Тестовые данные',
                   'Все текущие данные будут заменены тестовыми. Это действие нельзя отменить.',
                   [
                     { text: 'Отмена', style: 'cancel' },
                     {
-                      text: 'Сбросить',
+                      text: 'Загрузить',
                       style: 'destructive',
                       onPress: async () => {
                         await seedTestData();
@@ -407,6 +514,77 @@ export const ProfileScreen = () => {
                   ],
                 );
               },
+            )}
+            {renderSettingItem(
+              'database-remove',
+              'Очистить все данные',
+              isClearing ? (
+                <ActivityIndicator size="small" color={colors.error} />
+              ) : (
+                <Icon
+                  name="chevron-right"
+                  size={20}
+                  color={colors.text.secondary}
+                />
+              ),
+              () => {
+                Alert.alert(
+                  '⚠️ Очистка всех данных',
+                  'Это действие удалит ВСЕ ваши данные:\n\n' +
+                    '• Все транзакции\n' +
+                    '• Все бюджеты\n' +
+                    '• Все финансовые цели\n' +
+                    '• Все категории\n\n' +
+                    'Данные будут удалены без возможности восстановления!\n\n' +
+                    'Рекомендуется перед очисткой сделать резервную копию.',
+                  [
+                    { text: 'Отмена', style: 'cancel' },
+                    {
+                      text: 'Сделать резервную копию',
+                      onPress: () => handleExportJSON(),
+                    },
+                    {
+                      text: 'Очистить всё',
+                      style: 'destructive',
+                      onPress: () => {
+                        Alert.alert(
+                          'Финальное подтверждение',
+                          'Вы уверены, что хотите безвозвратно удалить все данные?',
+                          [
+                            { text: 'Отмена', style: 'cancel' },
+                            {
+                              text: 'Да, удалить всё',
+                              style: 'destructive',
+                              onPress: async () => {
+                                setIsClearing(true);
+                                try {
+                                  const result =
+                                    await backupService.clearAllData();
+                                  if (result.success) {
+                                    Alert.alert('✅ Готово', result.message);
+                                    // Перезагружаем приложение
+                                    navigation.replace('Main');
+                                  } else {
+                                    Alert.alert('❌ Ошибка', result.message);
+                                  }
+                                } catch (error) {
+                                  Alert.alert(
+                                    '❌ Ошибка',
+                                    'Не удалось очистить данные',
+                                  );
+                                } finally {
+                                  setIsClearing(false);
+                                }
+                              },
+                            },
+                          ],
+                        );
+                      },
+                    },
+                  ],
+                );
+              },
+              true,
             )}
           </>,
         )}
