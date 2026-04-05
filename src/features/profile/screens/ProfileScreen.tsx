@@ -445,7 +445,7 @@ export const ProfileScreen = () => {
               ),
               handleImportJSON,
             )}
-            {renderSettingItem(
+            {/* {renderSettingItem(
               'file-csv',
               'Экспорт транзакций (CSV)',
               isExporting ? (
@@ -458,7 +458,7 @@ export const ProfileScreen = () => {
                 />
               ),
               handleExportCSV,
-            )}
+            )} */}
             {renderSettingItem(
               'upload',
               'Импорт CSV из банка',
