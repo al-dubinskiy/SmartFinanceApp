@@ -45,7 +45,7 @@ export const TransactionDetailScreen: React.FC<
       const found = transactions.find(t => t._raw.id === transactionId);
       setTransaction(found);
 
-      if (found) {
+      if (found && found.categoryId) {
         const cat = await categoryService.getCategoryById(found.categoryId);
         setCategory(cat);
       }

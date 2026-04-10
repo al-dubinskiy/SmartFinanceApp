@@ -29,6 +29,7 @@ import backupService from '../../../core/services/backup.service';
 import { CSVImportModal } from '../components/CSVImportModal';
 import { useNavigation } from '@react-navigation/native';
 import { seedTestData } from '../../../database/seedData';
+import { CSVImportWizard } from '../components/CSVImportWizard';
 
 export const ProfileScreen = () => {
   const { colors } = useTheme();
@@ -460,7 +461,7 @@ export const ProfileScreen = () => {
               handleExportCSV,
             )} */}
             {renderSettingItem(
-              'upload',
+              'file-csv',
               'Импорт CSV из банка',
               <Icon
                 name="chevron-right"
@@ -639,11 +640,18 @@ export const ProfileScreen = () => {
         <View style={styles.bottomSpacing} />
       </ScrollView>
 
-      <CSVImportModal
+      {/* <CSVImportModal
         visible={showCSVImport}
         onClose={() => setShowCSVImport(false)}
         onSuccess={() => {
           Alert.alert('Готово', 'CSV успешно импортирован');
+        }}
+      /> */}
+      <CSVImportWizard
+        visible={showCSVImport}
+        onClose={() => setShowCSVImport(false)}
+        onSuccess={() => {
+          Alert.alert('Успешно', 'Транзакции импортированы');
         }}
       />
     </View>
