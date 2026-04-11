@@ -416,24 +416,23 @@ export const ReportsScreen = ({ navigation }: any) => {
         </TouchableOpacity>
       </View>
 
-    
       {/* Кнопки экспорта */}
       <View style={styles.exportSection}>
         <View style={styles.exportButtons}>
           <TouchableOpacity
-          style={[styles.exportButton, { backgroundColor: colors.primary }]}
-          onPress={handleExportCSV}
-        >
-          <Icon name="file-excel" size={20} color="#FFFFFF" />
-          <Text style={styles.exportButtonText}>Export CSV</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.exportButton, { backgroundColor: colors.success }]}
-          onPress={handleExportExcel}
-        >
-          <Icon name="microsoft-excel" size={20} color="#FFFFFF" />
-          <Text style={styles.exportButtonText}>Export Excel</Text>
-        </TouchableOpacity>
+            style={[styles.exportButton, { backgroundColor: colors.primary }]}
+            onPress={handleExportCSV}
+          >
+            <Icon name="file-excel" size={20} color="#FFFFFF" />
+            <Text style={styles.exportButtonText}>Export CSV</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.exportButton, { backgroundColor: colors.success }]}
+            onPress={handleExportExcel}
+          >
+            <Icon name="microsoft-excel" size={20} color="#FFFFFF" />
+            <Text style={styles.exportButtonText}>Export Excel</Text>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -538,7 +537,14 @@ export const ReportsScreen = ({ navigation }: any) => {
             ]}
             onPress={() => setDateRange('week')}
           >
-            <Text style={[styles.filterText, dateRange === 'week' ? {color: '#fff'} : {}]}>Неделя</Text>
+            <Text
+              style={[
+                styles.filterText,
+                dateRange === 'week' ? { color: '#fff' } : {},
+              ]}
+            >
+              Неделя
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[
@@ -547,7 +553,14 @@ export const ReportsScreen = ({ navigation }: any) => {
             ]}
             onPress={() => setDateRange('month')}
           >
-            <Text style={[styles.filterText, dateRange === 'month' ? {color: '#fff'} : {}]}>Месяц</Text>
+            <Text
+              style={[
+                styles.filterText,
+                dateRange === 'month' ? { color: '#fff' } : {},
+              ]}
+            >
+              Месяц
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[
@@ -556,7 +569,14 @@ export const ReportsScreen = ({ navigation }: any) => {
             ]}
             onPress={() => setDateRange('year')}
           >
-            <Text style={[styles.filterText, dateRange === 'year' ? {color: '#fff'} : {}]}>Год</Text>
+            <Text
+              style={[
+                styles.filterText,
+                dateRange === 'year' ? { color: '#fff' } : {},
+              ]}
+            >
+              Год
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[
@@ -565,7 +585,14 @@ export const ReportsScreen = ({ navigation }: any) => {
             ]}
             onPress={() => setDateRange('all')}
           >
-            <Text style={[styles.filterText, dateRange === 'all' ? {color: '#fff'} : {}]}>За всё время</Text>
+            <Text
+              style={[
+                styles.filterText,
+                dateRange === 'all' ? { color: '#fff' } : {},
+              ]}
+            >
+              За всё время
+            </Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
@@ -588,7 +615,7 @@ export const ReportsScreen = ({ navigation }: any) => {
             >
               Топ категории расходов
             </Text>
-            
+
             {categoryStats.slice(0, 5).map((stat, index) => (
               <View key={index} style={styles.categoryStatItem}>
                 <View style={styles.categoryStatLeft}>
@@ -618,12 +645,12 @@ export const ReportsScreen = ({ navigation }: any) => {
             ))}
           </View>
         )}
-  {/* Информация о количестве транзакций */}
-      <View style={styles.infoContainer}>
-        <Text style={[styles.infoText, { color: colors.text.secondary }]}>
-          Найдено транзакций: {filteredTransactions.length}
-        </Text>
-      </View>
+        {/* Информация о количестве транзакций */}
+        <View style={styles.infoContainer}>
+          <Text style={[styles.infoText, { color: colors.text.secondary }]}>
+            Найдено транзакций: {filteredTransactions.length}
+          </Text>
+        </View>
 
         {filteredTransactions.length === 0 ? (
           <View
@@ -652,49 +679,51 @@ export const ReportsScreen = ({ navigation }: any) => {
                 { backgroundColor: colors.surface },
               ]}
             >
-              <View>
-                <Text
-                  style={[
-                    styles.transactionCategory,
-                    { color: colors.text.primary },
-                  ]}
-                >
-                  {getCategoryName(transaction.categoryId)}
-                </Text>
-                <Text
-                  style={[
-                    styles.transactionDate,
-                    { color: colors.text.secondary },
-                  ]}
-                >
-                  {formatDate(transaction.date)}
-                </Text>
-                {transaction.note ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12}}>
+                <View style={{flex: 1}}>
                   <Text
                     style={[
-                      styles.transactionNote,
+                      styles.transactionCategory,
+                      { color: colors.text.primary },
+                    ]}
+                  >
+                    {getCategoryName(transaction.categoryId)}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.transactionDate,
                       { color: colors.text.secondary },
                     ]}
-                    numberOfLines={1}
                   >
-                    {transaction.note}
+                    {formatDate(transaction.date)}
                   </Text>
-                ) : null}
+                  {transaction.note ? (
+                    <Text
+                      style={[
+                        styles.transactionNote,
+                        { color: colors.text.secondary },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {transaction.note}
+                    </Text>
+                  ) : null}
+                </View>
+                <Text
+                  style={[
+                    styles.transactionAmount,
+                    {
+                      color:
+                        transaction.type === 'income'
+                          ? colors.success
+                          : colors.error,
+                    },
+                  ]}
+                >
+                  {transaction.type === 'income' ? '+' : '-'}
+                  {formatCurrency(transaction.amount)}
+                </Text>
               </View>
-              <Text
-                style={[
-                  styles.transactionAmount,
-                  {
-                    color:
-                      transaction.type === 'income'
-                        ? colors.success
-                        : colors.error,
-                  },
-                ]}
-              >
-                {transaction.type === 'income' ? '+' : '-'}
-                {formatCurrency(transaction.amount)}
-              </Text>
             </View>
           ))
         )}

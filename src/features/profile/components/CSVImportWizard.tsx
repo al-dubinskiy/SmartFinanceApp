@@ -36,6 +36,13 @@ interface CSVColumnMapping {
   categoryColumn?: string;
 }
 
+interface TransactionDuplicateInfo {
+  isDuplicate: boolean;
+  existingTransactionId?: string;
+  existingTransactionDate?: number;
+  existingTransactionAmount?: number;
+}
+
 export const CSVImportWizard: React.FC<CSVImportWizardProps> = ({
   visible,
   onClose,
@@ -49,6 +56,7 @@ export const CSVImportWizard: React.FC<CSVImportWizardProps> = ({
   const [selectedTransactions, setSelectedTransactions] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
+  const [duplicateMap, setDuplicateMap] = useState<Map<string, TransactionDuplicateInfo>>(new Map());
   const [mapping, setMapping] = useState<CSVColumnMapping>({
     dateColumn: '',
     amountColumn: '',
@@ -210,12 +218,81 @@ export const CSVImportWizard: React.FC<CSVImportWizardProps> = ({
     return description.substring(0, 30);
   };
 
-  const applyMapping = (rawData: any[], mapping: CSVColumnMapping): any[] => {
+  // ============ ФУНКЦИИ ДЛЯ ПРОВЕРКИ ДУБЛИКАТОВ ============
+
+  const generateTransactionFingerprint = (transaction: any): string => {
+    // Создаем уникальный fingerprint транзакции на основе ключевых полей
+    const date = transaction.date instanceof Date ? transaction.date.getTime() : transaction.date;
+    const amount = Math.round(transaction.amount * 100); // Избегаем проблем с плавающей точкой
+    const description = transaction.description.trim().toLowerCase();
+    
+    // Берем первые 50 символов описания для сравнения
+    const shortDescription = description// ?.substring(0, 50);
+    return `${date}_${amount}_${shortDescription}_${transaction.type}`;
+  };
+
+  const checkForDuplicates = async (transactions: any[]): Promise<Map<string, TransactionDuplicateInfo>> => {
+    try {
+      // Получаем все существующие транзакции из базы данных
+      const existingTransactions = await transactionService.getAllTransactions();
+      
+      // Создаем мапу существующих транзакций по fingerprint
+      const existingFingerprints = new Map<string, any>();
+      console.log('dfdsfdsdf', existingTransactions)
+      for (const existingTx of existingTransactions) {
+        const raw = existingTx._raw || existingTx;
+        const fingerprint = generateTransactionFingerprint({
+          date: raw.date,
+          amount: raw.amount,
+          description: raw.note || '',
+          type: raw.type,
+        });
+        
+        if (!existingFingerprints.has(fingerprint)) {
+          existingFingerprints.set(fingerprint, {
+            id: raw.id,
+            date: raw.date,
+            amount: raw.amount,
+          });
+        }
+      }
+
+      console.log(Array.from(existingFingerprints))
+      
+      // Проверяем каждую новую транзакцию на дубликат
+      const duplicateInfoMap = new Map<string, TransactionDuplicateInfo>();
+      
+      for (const transaction of transactions) {
+        const fingerprint = generateTransactionFingerprint(transaction);
+        const existing = existingFingerprints.get(fingerprint);
+        console.log(transaction, fingerprint, existing)
+        if (existing) {
+          duplicateInfoMap.set(transaction.id, {
+            isDuplicate: true,
+            existingTransactionId: existing.id,
+            existingTransactionDate: existing.date,
+            existingTransactionAmount: existing.amount,
+          });
+        } else {
+          duplicateInfoMap.set(transaction.id, {
+            isDuplicate: false,
+          });
+        }
+      }
+      
+      return duplicateInfoMap;
+    } catch (error) {
+      console.error('Error checking duplicates:', error);
+      // В случае ошибки возвращаем пустую мапу (все транзакции считаем новыми)
+      return new Map();
+    }
+  };
+
+  const applyMapping = async (rawData: any[], mapping: CSVColumnMapping): Promise<any[]> => {
     const transactions: any[] = [];
     
     for (let i = 0; i < rawData.length; i++) {
       const row = rawData[i];
-
       
       try {
         const date = parseDateFromRow(row, mapping);
@@ -246,6 +323,20 @@ export const CSVImportWizard: React.FC<CSVImportWizardProps> = ({
       }
     }
     
+    // Проверяем на дубликаты
+    const duplicateInfo = await checkForDuplicates(transactions);
+    setDuplicateMap(duplicateInfo);
+    
+    // Автоматически исключаем дубликаты из выбранных
+    const newSelectedTransactions = new Set<string>();
+    for (const tx of transactions) {
+      const dupInfo = duplicateInfo.get(tx.id);
+      if (!dupInfo?.isDuplicate) {
+        newSelectedTransactions.add(tx.id);
+      }
+    }
+    setSelectedTransactions(newSelectedTransactions);
+    
     return transactions;
   };
 
@@ -260,11 +351,15 @@ export const CSVImportWizard: React.FC<CSVImportWizardProps> = ({
       }
     }
     
+    const duplicateCount = Array.from(duplicateMap.values()).filter(d => d.isDuplicate).length;
+    
     return {
       totalIncome,
       totalExpense,
       balance: totalIncome - totalExpense,
       transactionCount: transactions.length,
+      duplicateCount,
+      newCount: transactions.length - duplicateCount,
       byCategory,
       topCategories: Object.entries(byCategory).sort((a, b) => b[1] - a[1]).slice(0, 5),
     };
@@ -311,7 +406,8 @@ export const CSVImportWizard: React.FC<CSVImportWizardProps> = ({
       
       setStep('mapping');
     } catch (err) {
-        console.error('File selection error:', err);
+      console.error('File selection error:', err);
+      Alert.alert('Ошибка', 'Не удалось выбрать файл');
     } finally {
       setIsLoading(false);
     }
@@ -350,19 +446,37 @@ export const CSVImportWizard: React.FC<CSVImportWizardProps> = ({
     setMapping(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleApplyMapping = () => {
+  const handleApplyMapping = async () => {
     if (!mapping.dateColumn || !mapping.amountColumn || !mapping.descriptionColumn) {
       Alert.alert('Ошибка', 'Пожалуйста, выберите обязательные колонки');
       return;
     }
     
-    const transactions = applyMapping(csvData, mapping);
-    setParsedTransactions(transactions);
-    setSelectedTransactions(new Set(transactions.map(t => t.id)));
-    setStep('preview');
+    setIsLoading(true);
+    try {
+      const transactions = await applyMapping(csvData, mapping);
+      setParsedTransactions(transactions);
+      setStep('preview');
+    } catch (error) {
+      console.error('Error applying mapping:', error);
+      Alert.alert('Ошибка', 'Не удалось применить маппинг');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const toggleTransaction = (id: string) => {
+    const dupInfo = duplicateMap.get(id);
+    // Не позволяем выбрать дубликат
+    if (dupInfo?.isDuplicate) {
+      Alert.alert(
+        'Дубликат транзакции',
+        'Эта транзакция уже существует в базе данных и не может быть импортирована повторно.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+    
     setSelectedTransactions(prev => {
       const newSet = new Set(prev);
       if (newSet.has(id)) {
@@ -375,19 +489,40 @@ export const CSVImportWizard: React.FC<CSVImportWizardProps> = ({
   };
 
   const toggleAllTransactions = () => {
-    if (selectedTransactions.size === parsedTransactions.length) {
-      setSelectedTransactions(new Set());
+    const nonDuplicateIds = parsedTransactions
+      .filter(t => !duplicateMap.get(t.id)?.isDuplicate)
+      .map(t => t.id);
+    
+    const selectedNonDuplicates = Array.from(selectedTransactions).filter(
+      id => !duplicateMap.get(id)?.isDuplicate
+    );
+    
+    if (selectedNonDuplicates.length === nonDuplicateIds.length) {
+      // Отменяем выбор всех недубликатов
+      const newSelected = new Set(selectedTransactions);
+      nonDuplicateIds.forEach(id => newSelected.delete(id));
+      setSelectedTransactions(newSelected);
     } else {
-      setSelectedTransactions(new Set(parsedTransactions.map(t => t.id)));
+      // Выбираем все недубликаты
+      const newSelected = new Set(selectedTransactions);
+      nonDuplicateIds.forEach(id => newSelected.add(id));
+      setSelectedTransactions(newSelected);
     }
   };
 
   const handleImport = async () => {
+    const selected = parsedTransactions.filter(t => selectedTransactions.has(t.id));
+    
+    if (selected.length === 0) {
+      Alert.alert('Ошибка', 'Нет транзакций для импорта');
+      return;
+    }
+    
     setIsLoading(true);
     setStep('importing');
     
-    const selected = parsedTransactions.filter(t => selectedTransactions.has(t.id));
     let imported = 0;
+    let duplicatesSkipped = 0;
     
     try {
       const categories = await categoryService.getAllCategories();
@@ -397,11 +532,35 @@ export const CSVImportWizard: React.FC<CSVImportWizardProps> = ({
         categoryMap.set(raw.name.toLowerCase(), raw.id);
       });
       
-      //  return  console.log(categoryMap,  categories, 'fdgdf')
       const defaultCategoryId = categoryMap.get('прочее') || categoryMap.get('другое');
       
       for (let i = 0; i < selected.length; i++) {
         const tx = selected[i];
+        
+        // Дополнительная проверка перед импортом
+        const fingerprint = generateTransactionFingerprint(tx);
+        const existingTransactions = await transactionService.getAllTransactions();
+        let isDuplicate = false;
+        
+        for (const existingTx of existingTransactions) {
+          const raw = existingTx._raw || existingTx;
+          const existingFingerprint = generateTransactionFingerprint({
+            date: raw.date,
+            amount: raw.amount,
+            description: raw.note || '',
+            type: raw.type,
+          });
+          
+          if (fingerprint === existingFingerprint) {
+            isDuplicate = true;
+            duplicatesSkipped++;
+            break;
+          }
+        }
+        
+        if (isDuplicate) {
+          continue;
+        }
         
         let categoryId = defaultCategoryId;
         const categoryName = tx.category?.toLowerCase();
@@ -413,7 +572,7 @@ export const CSVImportWizard: React.FC<CSVImportWizardProps> = ({
           amount: tx.amount,
           type: tx.type,
           categoryId: categoryId || defaultCategoryId,
-          note: `${tx.description}\nМагазин: ${tx.merchantName || ''}`,
+          note: `${tx.description}`,
           date: tx.date.getTime(),
           isRecurring: false,
         });
@@ -424,7 +583,10 @@ export const CSVImportWizard: React.FC<CSVImportWizardProps> = ({
       
       Alert.alert(
         'Импорт завершен',
-        `Импортировано: ${imported} транзакций\nВсего в файле: ${parsedTransactions.length}`,
+        `✅ Импортировано: ${imported} транзакций\n` +
+        `⏭️ Пропущено дубликатов: ${duplicatesSkipped}\n` +
+        `📊 Всего в файле: ${parsedTransactions.length}\n` +
+        `🆕 Новых транзакций: ${imported}`,
         [{ text: 'OK', onPress: () => {
           onSuccess();
           onClose();
@@ -446,6 +608,7 @@ export const CSVImportWizard: React.FC<CSVImportWizardProps> = ({
     setCsvData([]);
     setParsedTransactions([]);
     setSelectedTransactions(new Set());
+    setDuplicateMap(new Map());
     setImportProgress(0);
     setMapping({
       dateColumn: '',
@@ -524,7 +687,7 @@ export const CSVImportWizard: React.FC<CSVImportWizardProps> = ({
               style={[styles.mappingOption, !mapping.dateColumn && styles.mappingOptionSelected]}
               onPress={() => handleMappingChange('dateColumn', '')}
             >
-              <Text style={[[styles.mappingOptionText, !mapping.dateColumn && {color: '#fff'}]]}>Не выбрано</Text>
+              <Text style={[styles.mappingOptionText, !mapping.dateColumn && {color: '#fff'}]}>Не выбрано</Text>
             </TouchableOpacity>
             {csvHeaders.map(header => (
               <TouchableOpacity
@@ -532,7 +695,7 @@ export const CSVImportWizard: React.FC<CSVImportWizardProps> = ({
                 style={[styles.mappingOption, mapping.dateColumn === header && styles.mappingOptionSelected]}
                 onPress={() => handleMappingChange('dateColumn', header)}
               >
-                   <Text style={[[styles.mappingOptionText, mapping.dateColumn === header  && {color: '#fff'}]]}>{header}</Text>
+                <Text style={[styles.mappingOptionText, mapping.dateColumn === header && {color: '#fff'}]}>{header}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -548,7 +711,7 @@ export const CSVImportWizard: React.FC<CSVImportWizardProps> = ({
               style={[styles.mappingOption, !mapping.timeColumn && styles.mappingOptionSelected]}
               onPress={() => handleMappingChange('timeColumn', '')}
             >
-              <Text style={[[styles.mappingOptionText, !mapping.timeColumn && {color: '#fff'}]]}>Не выбрано</Text>
+              <Text style={[styles.mappingOptionText, !mapping.timeColumn && {color: '#fff'}]}>Не выбрано</Text>
             </TouchableOpacity>
             {csvHeaders.map(header => (
               <TouchableOpacity
@@ -556,7 +719,7 @@ export const CSVImportWizard: React.FC<CSVImportWizardProps> = ({
                 style={[styles.mappingOption, mapping.timeColumn === header && styles.mappingOptionSelected]}
                 onPress={() => handleMappingChange('timeColumn', header)}
               >
-                <Text style={[[styles.mappingOptionText, mapping.timeColumn === header  && {color: '#fff'}]]}>{header}</Text>
+                <Text style={[styles.mappingOptionText, mapping.timeColumn === header && {color: '#fff'}]}>{header}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -572,7 +735,7 @@ export const CSVImportWizard: React.FC<CSVImportWizardProps> = ({
               style={[styles.mappingOption, !mapping.amountColumn && styles.mappingOptionSelected]}
               onPress={() => handleMappingChange('amountColumn', '')}
             >
-                <Text style={[[styles.mappingOptionText, !mapping.amountColumn && {color: '#fff'}]]}>Не выбрано</Text>
+              <Text style={[styles.mappingOptionText, !mapping.amountColumn && {color: '#fff'}]}>Не выбрано</Text>
             </TouchableOpacity>
             {csvHeaders.map(header => (
               <TouchableOpacity
@@ -580,7 +743,7 @@ export const CSVImportWizard: React.FC<CSVImportWizardProps> = ({
                 style={[styles.mappingOption, mapping.amountColumn === header && styles.mappingOptionSelected]}
                 onPress={() => handleMappingChange('amountColumn', header)}
               >
-                 <Text style={[[styles.mappingOptionText, mapping.amountColumn === header  && {color: '#fff'}]]}>{header}</Text>
+                <Text style={[styles.mappingOptionText, mapping.amountColumn === header && {color: '#fff'}]}>{header}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -596,7 +759,7 @@ export const CSVImportWizard: React.FC<CSVImportWizardProps> = ({
               style={[styles.mappingOption, !mapping.descriptionColumn && styles.mappingOptionSelected]}
               onPress={() => handleMappingChange('descriptionColumn', '')}
             >
-               <Text style={[[styles.mappingOptionText, !mapping.descriptionColumn && {color: '#fff'}]]}>Не выбрано</Text>
+              <Text style={[styles.mappingOptionText, !mapping.descriptionColumn && {color: '#fff'}]}>Не выбрано</Text>
             </TouchableOpacity>
             {csvHeaders.map(header => (
               <TouchableOpacity
@@ -604,7 +767,7 @@ export const CSVImportWizard: React.FC<CSVImportWizardProps> = ({
                 style={[styles.mappingOption, mapping.descriptionColumn === header && styles.mappingOptionSelected]}
                 onPress={() => handleMappingChange('descriptionColumn', header)}
               >
-                <Text style={[[styles.mappingOptionText, mapping.descriptionColumn === header  && {color: '#fff'}]]}>{header}</Text>
+                <Text style={[styles.mappingOptionText, mapping.descriptionColumn === header && {color: '#fff'}]}>{header}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -620,7 +783,7 @@ export const CSVImportWizard: React.FC<CSVImportWizardProps> = ({
               style={[styles.mappingOption, !mapping.typeColumn && styles.mappingOptionSelected]}
               onPress={() => handleMappingChange('typeColumn', '')}
             >
-            <Text style={[[styles.mappingOptionText, !mapping.typeColumn && {color: '#fff'}]]}>Автоопределение</Text>
+              <Text style={[styles.mappingOptionText, !mapping.typeColumn && {color: '#fff'}]}>Автоопределение</Text>
             </TouchableOpacity>
             {csvHeaders.map(header => (
               <TouchableOpacity
@@ -628,7 +791,7 @@ export const CSVImportWizard: React.FC<CSVImportWizardProps> = ({
                 style={[styles.mappingOption, mapping.typeColumn === header && styles.mappingOptionSelected]}
                 onPress={() => handleMappingChange('typeColumn', header)}
               >
-                 <Text style={[[styles.mappingOptionText, mapping.typeColumn === header  && {color: '#fff'}]]}>{header}</Text>
+                <Text style={[styles.mappingOptionText, mapping.typeColumn === header && {color: '#fff'}]}>{header}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -644,7 +807,7 @@ export const CSVImportWizard: React.FC<CSVImportWizardProps> = ({
               style={[styles.mappingOption, !mapping.categoryColumn && styles.mappingOptionSelected]}
               onPress={() => handleMappingChange('categoryColumn', '')}
             >
-               <Text style={[[styles.mappingOptionText, !mapping.categoryColumn && {color: '#fff'}]]}>Не выбрано</Text>
+              <Text style={[styles.mappingOptionText, !mapping.categoryColumn && {color: '#fff'}]}>Не выбрано</Text>
             </TouchableOpacity>
             {csvHeaders.map(header => (
               <TouchableOpacity
@@ -652,7 +815,7 @@ export const CSVImportWizard: React.FC<CSVImportWizardProps> = ({
                 style={[styles.mappingOption, mapping.categoryColumn === header && styles.mappingOptionSelected]}
                 onPress={() => handleMappingChange('categoryColumn', header)}
               >
-                 <Text style={[[styles.mappingOptionText, mapping.categoryColumn === header  && {color: '#fff'}]]}>{header}</Text>
+                <Text style={[styles.mappingOptionText, mapping.categoryColumn === header && {color: '#fff'}]}>{header}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -670,8 +833,13 @@ export const CSVImportWizard: React.FC<CSVImportWizardProps> = ({
         <TouchableOpacity
           style={[styles.mappingButton, styles.applyButton, { backgroundColor: colors.primary }]}
           onPress={handleApplyMapping}
+          disabled={isLoading}
         >
-          <Text style={[styles.mappingButtonText, { color: '#FFFFFF' }]}>Применить</Text>
+          {isLoading ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <Text style={[styles.mappingButtonText, { color: '#FFFFFF' }]}>Применить</Text>
+          )}
         </TouchableOpacity>
       </View>
     </View>
@@ -680,16 +848,27 @@ export const CSVImportWizard: React.FC<CSVImportWizardProps> = ({
   const renderPreviewStep = () => {
     const stats = getStatistics(parsedTransactions);
     const selectedCount = selectedTransactions.size;
+    const nonDuplicateCount = parsedTransactions.length - stats.duplicateCount;
     
     return (
       <View style={styles.previewContainer}>
         <View style={styles.previewHeader}>
-          <Text style={[styles.previewTitle, { color: colors.text.primary }]}>
-            Найдено транзакций: {parsedTransactions.length}
-          </Text>
+          <View>
+            <Text style={[styles.previewTitle, { color: colors.text.primary }]}>
+              Найдено транзакций: {parsedTransactions.length}
+            </Text>
+            {stats.duplicateCount > 0 && (
+              <Text style={[styles.duplicateInfo, { color: colors.warning || '#FFA500' }]}>
+                ⚠️ Дубликатов: {stats.duplicateCount} (будут пропущены)
+              </Text>
+            )}
+            <Text style={[styles.newInfo, { color: colors.success || '#4CAF50' }]}>
+              ✨ Новых: {stats.newCount}
+            </Text>
+          </View>
           <TouchableOpacity onPress={toggleAllTransactions}>
             <Text style={[styles.selectAllText, { color: colors.primary }]}>
-              {selectedCount === parsedTransactions.length ? 'Отменить все' : 'Выбрать все'}
+              {selectedCount === nonDuplicateCount ? 'Отменить все' : 'Выбрать все новые'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -714,49 +893,73 @@ export const CSVImportWizard: React.FC<CSVImportWizardProps> = ({
             <Text style={[styles.statLabel, { color: colors.text.secondary }]}>Баланс</Text>
           </View>
         </View>
+        
         <ScrollView style={styles.transactionsList}>
-          {parsedTransactions.map((transaction) => (
-            <TouchableOpacity
-              key={transaction.id}
-              style={[
-                styles.transactionItem,
-                { backgroundColor: selectedTransactions.has(transaction.id) ? colors.primary + '10' : 'transparent' },
-              ]}
-              onPress={() => toggleTransaction(transaction.id)}
-            >
-              <View style={styles.transactionCheck}>
-                <Icon 
-                  name={selectedTransactions.has(transaction.id) ? 'checkbox-marked' : 'checkbox-blank-outline'} 
-                  size={22} 
-                  color={selectedTransactions.has(transaction.id) ? colors.primary : colors.text.secondary} 
-                />
-              </View>
-              <View style={styles.transactionInfo}>
-                <Text style={[styles.transactionDate, { color: colors.text.secondary }]}>
-                  {formatDate(transaction.date)}
-                </Text>
-                <Text style={[styles.transactionDesc, { color: colors.text.primary }]} numberOfLines={3} selectable={false}>
-                  {transaction.description}
-                </Text>
-                {transaction.category && (
-                  <Text style={[styles.transactionMerchant, { color: colors.text.secondary }]} numberOfLines={2}>
-                    {transaction.category}
+          {parsedTransactions.map((transaction) => {
+            const dupInfo = duplicateMap.get(transaction.id);
+            const isDuplicate = dupInfo?.isDuplicate || false;
+            const isSelected = selectedTransactions.has(transaction.id);
+            
+            return (
+              <TouchableOpacity
+                key={transaction.id}
+                style={[
+                  styles.transactionItem,
+                  { 
+                    backgroundColor: isSelected 
+                      ? colors.primary + '10' 
+                      : isDuplicate 
+                        ? (colors.error + '08') 
+                        : 'transparent',
+                    opacity: isDuplicate ? 0.7 : 1,
+                  },
+                ]}
+                onPress={() => toggleTransaction(transaction.id)}
+                disabled={isDuplicate}
+              >
+                <View style={styles.transactionCheck}>
+                  <Icon 
+                    name={isSelected ? 'checkbox-marked' : (isDuplicate ? 'close-circle' : 'checkbox-blank-outline')} 
+                    size={22} 
+                    color={isDuplicate ? colors.error : (isSelected ? colors.primary : colors.text.secondary)} 
+                  />
+                </View>
+                <View style={styles.transactionInfo}>
+                  <View style={styles.transactionHeader}>
+                    <Text style={[styles.transactionDate, { color: colors.text.secondary }]}>
+                      {formatDate(transaction.date)}
+                    </Text>
+                    {isDuplicate && (
+                      <View style={[styles.duplicateBadge, { backgroundColor: colors.error + '20' }]}>
+                        <Text style={[styles.duplicateBadgeText, { color: colors.error }]}>
+                          Дубликат
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={[styles.transactionDesc, { color: colors.text.primary }]} numberOfLines={3} selectable={false}>
+                    {transaction.description}
                   </Text>
-                )}
-                {/* {transaction.merchantName && (
-                  <Text style={[styles.transactionMerchant, { color: colors.text.secondary }]} numberOfLines={2}>
-                    {transaction.merchantName}
-                  </Text>
-                )} */}
-              </View>
-              <Text style={[
-                styles.transactionAmount,
-                { color: transaction.type === 'income' ? colors.success : colors.error },
-              ]}>
-                {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                  {transaction.category && (
+                    <Text style={[styles.transactionMerchant, { color: colors.text.secondary }]} numberOfLines={2}>
+                      {transaction.category}
+                    </Text>
+                  )}
+                  {isDuplicate && dupInfo?.existingTransactionDate && (
+                    <Text style={[styles.existingInfo, { color: colors.text.secondary }]}>
+                      Существующая транзакция от {new Date(dupInfo.existingTransactionDate).toLocaleDateString('ru-RU')}
+                    </Text>
+                  )}
+                </View>
+                <Text style={[
+                  styles.transactionAmount,
+                  { color: transaction.type === 'income' ? colors.success : colors.error },
+                ]}>
+                  {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
         
         <View style={styles.footerButtons}>
@@ -959,12 +1162,20 @@ const styles = StyleSheet.create({
   previewHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: 12,
   },
   previewTitle: {
     fontSize: 16,
     fontWeight: '600',
+    marginBottom: 4,
+  },
+  duplicateInfo: {
+    fontSize: 12,
+    marginBottom: 2,
+  },
+  newInfo: {
+    fontSize: 12,
   },
   selectAllText: {
     fontSize: 14,
@@ -1007,9 +1218,23 @@ const styles = StyleSheet.create({
   transactionInfo: {
     flex: 1,
   },
+  transactionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 2,
+  },
   transactionDate: {
     fontSize: 11,
-    marginBottom: 2,
+  },
+  duplicateBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  duplicateBadgeText: {
+    fontSize: 10,
+    fontWeight: '500',
   },
   transactionDesc: {
     fontSize: 13,
@@ -1017,6 +1242,10 @@ const styles = StyleSheet.create({
   },
   transactionMerchant: {
     fontSize: 11,
+  },
+  existingInfo: {
+    fontSize: 10,
+    marginTop: 2,
   },
   transactionAmount: {
     fontSize: 14,

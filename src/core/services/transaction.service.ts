@@ -25,7 +25,6 @@ class TransactionService {
     return await database.write(async () => {
       const transactions = getTransactionsCollection();
       return await transactions.create((transaction: any) => {
-        console.log('dfdsfsdf', transaction)
         transaction.amount = data.amount;
         transaction.type = data.type;
         transaction.categoryId = data.categoryId;

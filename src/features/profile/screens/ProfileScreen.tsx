@@ -30,6 +30,7 @@ import { CSVImportModal } from '../components/CSVImportModal';
 import { useNavigation } from '@react-navigation/native';
 import { seedTestData } from '../../../database/seedData';
 import { CSVImportWizard } from '../components/CSVImportWizard';
+import transactionService from '../../../core/services/transaction.service';
 
 export const ProfileScreen = () => {
   const { colors } = useTheme();
@@ -46,14 +47,26 @@ export const ProfileScreen = () => {
   const [isImporting, setIsImporting] = useState(false);
   const [showCSVImport, setShowCSVImport] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
+  const [isClearingTransactions, setIsClearingTransactions] = useState(false);
+  const [transactionCount, setTransactionCount] = useState(0);
 
   useEffect(() => {
     checkPinStatus();
+    loadTransactionCount();
   }, []);
 
   const checkPinStatus = async () => {
     const exists = await pinService.hasPin();
     setHasPin(exists);
+  };
+
+  const loadTransactionCount = async () => {
+    try {
+      const transactions = await transactionService.getAllTransactions();
+      setTransactionCount(transactions.length);
+    } catch (error) {
+      console.error('Error loading transaction count:', error);
+    }
   };
 
   const handleRemovePin = () => {
@@ -215,6 +228,102 @@ export const ProfileScreen = () => {
     }
   };
 
+  // Новая функция: удаление всех транзакций
+  const handleClearTransactions = async () => {
+    const count = transactionCount;
+
+    if (count === 0) {
+      Alert.alert('Информация', 'У вас нет транзакций для удаления.');
+      return;
+    }
+
+    Alert.alert(
+      '🗑️ Удаление всех транзакций',
+      `Вы действительно хотите удалить ВСЕ транзакции (${count} шт.)?\n\n` +
+        '⚠️ ВНИМАНИЕ:\n' +
+        '• Будут удалены ТОЛЬКО транзакции\n' +
+        '• Категории, бюджеты и цели сохранятся\n' +
+        '• Статистика будет пересчитана\n\n' +
+        'Это действие нельзя отменить!',
+      [
+        { text: 'Отмена', style: 'cancel' },
+        {
+          text: 'Сделать резервную копию',
+          onPress: () => {
+            Alert.alert(
+              'Создание резервной копии',
+              'Рекомендуется сделать резервную копию перед удалением транзакций. Создать копию?',
+              [
+                { text: 'Отмена', style: 'cancel' },
+                { text: 'Создать копию', onPress: handleExportJSON },
+                {
+                  text: 'Продолжить без копии',
+                  style: 'destructive',
+                  onPress: () => confirmClearTransactions(),
+                },
+              ],
+            );
+          },
+        },
+        {
+          text: `Удалить ${count} транзакций`,
+          style: 'destructive',
+          onPress: () => confirmClearTransactions(),
+        },
+      ],
+    );
+  };
+
+  const confirmClearTransactions = () => {
+    Alert.alert(
+      'Подтвердите действие',
+      'Вы уверены, что хотите безвозвратно удалить все транзакции?',
+      [
+        { text: 'Отмена', style: 'cancel' },
+        {
+          text: 'Да, удалить всё',
+          style: 'destructive',
+          onPress: async () => {
+            setIsClearingTransactions(true);
+
+            try {
+              const result = await backupService.clearAllData();
+              if (result.success) {
+                Alert.alert('✅ Готово', result.message);
+                // Перезагружаем приложение
+                navigation.replace('Main');
+              } else {
+                Alert.alert('❌ Ошибка', result.message);
+              }
+              await loadTransactionCount(); // Обновляем счетчик
+
+              Alert.alert(
+                '✅ Транзакции удалены',
+                `Успешно удалено ${transactionCount} транзакций.\n\n` +
+                  `Баланс и статистика будут пересчитаны автоматически.`,
+                [
+                  {
+                    text: 'OK',
+                    onPress: () => {
+                    },
+                  },
+                ],
+              );
+            } catch (error) {
+              console.error('Error clearing transactions:', error);
+              Alert.alert(
+                '❌ Ошибка',
+                'Не удалось удалить транзакции. Попробуйте позже.',
+              );
+            } finally {
+              setIsClearingTransactions(false);
+            }
+          },
+        },
+      ],
+    );
+  };
+
   const handleLogout = () => {
     Alert.alert('Выход из аккаунта', 'Вы уверены, что хотите выйти?', [
       { text: 'Отмена', style: 'cancel' },
@@ -241,6 +350,7 @@ export const ProfileScreen = () => {
     rightElement: React.ReactNode,
     onPress?: () => void,
     danger?: boolean,
+    description?: string,
   ) => (
     <TouchableOpacity
       style={styles.settingItem}
@@ -249,7 +359,8 @@ export const ProfileScreen = () => {
       activeOpacity={0.7}
     >
       <View style={styles.settingLeft}>
-        {icon !== 'file-csv' ? (
+        {
+        icon !== 'file-csv' ? (
           <Icon
             name={icon}
             size={24}
@@ -264,14 +375,26 @@ export const ProfileScreen = () => {
           />
         )}
 
-        <Text
-          style={[
-            styles.settingText,
-            { color: danger ? colors.error : colors.text.primary },
-          ]}
-        >
-          {label}
-        </Text>
+        <View>
+          <Text
+            style={[
+              styles.settingText,
+              { color: danger ? colors.error : colors.text.primary },
+            ]}
+          >
+            {label}
+          </Text>
+          {description && (
+            <Text
+              style={[
+                styles.settingDescription,
+                { color: colors.text.secondary },
+              ]}
+            >
+              {description}
+            </Text>
+          )}
+        </View>
       </View>
       <View style={styles.settingRight}>{rightElement}</View>
     </TouchableOpacity>
@@ -431,6 +554,8 @@ export const ProfileScreen = () => {
                 />
               ),
               handleExportJSON,
+              false,
+              'Полная копия всех данных',
             )}
             {renderSettingItem(
               'restore',
@@ -445,21 +570,9 @@ export const ProfileScreen = () => {
                 />
               ),
               handleImportJSON,
+              false,
+              'Восстановить все данные из JSON',
             )}
-            {/* {renderSettingItem(
-              'file-csv',
-              'Экспорт транзакций (CSV)',
-              isExporting ? (
-                <ActivityIndicator size="small" color={colors.primary} />
-              ) : (
-                <Icon
-                  name="chevron-right"
-                  size={20}
-                  color={colors.text.secondary}
-                />
-              ),
-              handleExportCSV,
-            )} */}
             {renderSettingItem(
               'file-csv',
               'Импорт CSV из банка',
@@ -469,6 +582,8 @@ export const ProfileScreen = () => {
                 color={colors.text.secondary}
               />,
               () => setShowCSVImport(true),
+              false,
+              'Импорт выписки из банка',
             )}
             {renderSettingItem(
               'format-list-bulleted',
@@ -479,6 +594,8 @@ export const ProfileScreen = () => {
                 color={colors.text.secondary}
               />,
               () => navigation.navigate('Categories'),
+              false,
+              'Добавление, редактирование категорий',
             )}
             {renderSettingItem(
               'file-chart',
@@ -489,6 +606,8 @@ export const ProfileScreen = () => {
                 color={colors.text.secondary}
               />,
               () => navigation.navigate('Reports'),
+              false,
+              'Аналитика доходов и расходов',
             )}
             {renderSettingItem(
               'database-refresh',
@@ -501,21 +620,61 @@ export const ProfileScreen = () => {
               () => {
                 Alert.alert(
                   'Тестовые данные',
-                  'Все текущие данные будут заменены тестовыми. Это действие нельзя отменить.',
+                  'Все текущие данные будут заменены тестовыми. Это действие нельзя отменить.\n\nРекомендуется сделать резервную копию.',
                   [
                     { text: 'Отмена', style: 'cancel' },
+                    {
+                      text: 'Сделать резервную копию',
+                      onPress: handleExportJSON,
+                    },
                     {
                       text: 'Загрузить',
                       style: 'destructive',
                       onPress: async () => {
                         await seedTestData();
+                        await loadTransactionCount();
                         Alert.alert('Готово', 'Тестовые данные загружены');
+                        navigation.replace('Main');
                       },
                     },
                   ],
                 );
               },
+              false,
+              '⚠️ Заменит все текущие данные',
             )}
+
+            {/* Разделитель для опасных операций */}
+            <View
+              style={[styles.divider, { backgroundColor: colors.border }]}
+            />
+
+            {renderSettingItem(
+              'delete-sweep',
+              'Удалить все транзакции',
+              isClearingTransactions ? (
+                <ActivityIndicator size="small" color={colors.error} />
+              ) : (
+                <View style={styles.badgeContainer}>
+                  {transactionCount > 0 && (
+                    <View
+                      style={[styles.badge, { backgroundColor: colors.error }]}
+                    >
+                      <Text style={styles.badgeText}>{transactionCount}</Text>
+                    </View>
+                  )}
+                  <Icon
+                    name="chevron-right"
+                    size={20}
+                    color={colors.text.secondary}
+                  />
+                </View>
+              ),
+              handleClearTransactions,
+              true,
+              `Удалить ${transactionCount} транзакций\n(категории сохранятся)`,
+            )}
+
             {renderSettingItem(
               'database-remove',
               'Очистить все данные',
@@ -549,7 +708,7 @@ export const ProfileScreen = () => {
                       style: 'destructive',
                       onPress: () => {
                         Alert.alert(
-                          'Финальное подтверждение',
+                          'Подтвердите действие',
                           'Вы уверены, что хотите безвозвратно удалить все данные?',
                           [
                             { text: 'Отмена', style: 'cancel' },
@@ -586,6 +745,7 @@ export const ProfileScreen = () => {
                 );
               },
               true,
+              '⚠️ Полная очистка всех данных',
             )}
           </>,
         )}
@@ -640,18 +800,12 @@ export const ProfileScreen = () => {
         <View style={styles.bottomSpacing} />
       </ScrollView>
 
-      {/* <CSVImportModal
-        visible={showCSVImport}
-        onClose={() => setShowCSVImport(false)}
-        onSuccess={() => {
-          Alert.alert('Готово', 'CSV успешно импортирован');
-        }}
-      /> */}
       <CSVImportWizard
         visible={showCSVImport}
         onClose={() => setShowCSVImport(false)}
         onSuccess={() => {
           Alert.alert('Успешно', 'Транзакции импортированы');
+          loadTransactionCount(); // Обновляем счетчик
         }}
       />
     </View>
@@ -710,9 +864,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    flex: 1,
   },
   settingText: {
     fontSize: 16,
+    fontWeight: '500',
+  },
+  settingDescription: {
+    fontSize: 12,
+    marginTop: 2,
+    lineHeight: 16
   },
   settingRight: {
     flexDirection: 'row',
@@ -720,6 +881,27 @@ const styles = StyleSheet.create({
   },
   settingValue: {
     fontSize: 14,
+  },
+  badgeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  badge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+    minWidth: 28,
+    alignItems: 'center',
+  },
+  badgeText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  divider: {
+    height: 1,
+    marginVertical: 12,
   },
   logoutButton: {
     flexDirection: 'row',

@@ -9,6 +9,7 @@ import { PlanningScreen } from '../features/planning/screens/PlanningScreen';
 import { ProfileScreen } from '../features/profile/screens/ProfileScreen';
 import { MainTabParamList } from './types';
 import { Colors } from '../core/constants/colors';
+import { useTheme } from '../core/hooks/useTheme';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
@@ -25,7 +26,8 @@ const CustomTabBarButton = ({ children, onPress }: any) => (
 );
 
 export const BottomTabNavigator = () => {
-  const isDarkMode = useColorScheme() === 'dark';
+  const { isDark: isDarkMode } = useTheme();
+  
   const colors = isDarkMode ? Colors.dark : Colors.light;
 
   return (

@@ -126,7 +126,7 @@ export const ABCAnalysis: React.FC<ABCAnalysisProps> = ({
             </View>
           </View>
 
-          <View style={styles.progressContainer}>
+          <View style={[styles.progressContainer, {backgroundColor: colors.border,}]}>
             <View
               style={[
                 styles.progressBar,

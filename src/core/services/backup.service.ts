@@ -444,6 +444,33 @@ class BackupService {
       };
     }
   }
+  /**
+   * Полная очистка таблицы со списком транзакций
+  */
+  async clearAllTransactions(): Promise<{ success: boolean; message: string }> {
+    try {
+      await database.write(async () => {
+        // Очищаем транзакции
+        const transactions = await getTransactionsCollection().query().fetch();
+        console.log(`📊 Удаляется ${transactions.length} транзакций...`);
+        for (const t of transactions) {
+          await t.destroyPermanently();
+        }
+      });
+
+      console.log('✅ Список транзакций успешно очищен');
+      return {
+        success: true,
+        message: 'Список транзакций успешно очищен',
+      };
+    } catch (error) {
+      console.error('❌ Ошибка при очистке списка транзакций:', error);
+      return {
+        success: false,
+        message: 'Не удалось очистить список транзакций ',
+      };
+    }
+  }
 }
 
 export interface CSVColumnMapping {

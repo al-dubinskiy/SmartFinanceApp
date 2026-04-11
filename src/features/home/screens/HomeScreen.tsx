@@ -18,7 +18,12 @@ import { BalanceCard } from '../components/BalanceCard';
 import { TransactionItem } from '../components/TransactionItem';
 import { formatMonthYear } from '../../../core/utils/formatters';
 import { useIsFocused } from '@react-navigation/native';
-import { getBudgetsCollection, getCategoriesCollection, getGoalsCollection, getTransactionsCollection } from '../../../database';
+import {
+  getBudgetsCollection,
+  getCategoriesCollection,
+  getGoalsCollection,
+  getTransactionsCollection,
+} from '../../../database';
 
 interface Stats {
   totalIncome: number;
@@ -51,7 +56,10 @@ export const HomeScreen: React.FC<MainTabScreenProps<'Home'>> = ({
   };
 
   // Форматирование транзакций для отображения
-  const formatTransactions = (transactionsList: any[], categoryMap: Map<string, any>) => {
+  const formatTransactions = (
+    transactionsList: any[],
+    categoryMap: Map<string, any>,
+  ) => {
     return transactionsList.map((t: any) => {
       const raw = getRawData(t);
       const category = categoryMap.get(raw.category_id);
@@ -106,17 +114,30 @@ export const HomeScreen: React.FC<MainTabScreenProps<'Home'>> = ({
         balance: statistics.balance,
       });
 
-      const categories = await getCategoriesCollection().query().fetch()
-      const goals = await getGoalsCollection().query().fetch()
-      const budgets = await getBudgetsCollection().query().fetch()
-      const transactions = await getTransactionsCollection().query().fetch()
-      console.log('Список всех категорий', categories.map(el => el._raw))
-      console.log('Список всех бюджетов', budgets.map(el => el._raw))
-      console.log('Список всех целей', goals.map(el => el._raw))
-      console.log('Список всех транзакций', transactions.map(el => el._raw))
+      const categories = await getCategoriesCollection().query().fetch();
+      const goals = await getGoalsCollection().query().fetch();
+      const budgets = await getBudgetsCollection().query().fetch();
+      const transactions = await getTransactionsCollection().query().fetch();
+      console.log(
+        'Список всех категорий',
+        categories.map(el => el._raw),
+      );
+      console.log(
+        'Список всех бюджетов',
+        budgets.map(el => el._raw),
+      );
+      console.log(
+        'Список всех целей',
+        goals.map(el => el._raw),
+      );
+      console.log(
+        'Список всех транзакций',
+        transactions.map(el => el._raw),
+      );
       // Получаем все транзакции
-      const allTransactionsList = await transactionService.getRecentTransactions(1000);
-      
+      const allTransactionsList =
+        await transactionService.getRecentTransactions(1000);
+
       // Получаем все категории для маппинга
       const allCategories = await categoryService.getAllCategories();
       const categoryMap = new Map<string, any>();
@@ -133,31 +154,37 @@ export const HomeScreen: React.FC<MainTabScreenProps<'Home'>> = ({
       };
 
       // Получаем деревья категорий для расходов и доходов
-      const expenseTree = await categoryService.getCategoriesByTypeWithTree('expense');
-      const incomeTree = await categoryService.getCategoriesByTypeWithTree('income');
+      const expenseTree = await categoryService.getCategoriesByTypeWithTree(
+        'expense',
+      );
+      const incomeTree = await categoryService.getCategoriesByTypeWithTree(
+        'income',
+      );
 
       addCategoriesToMap(expenseTree);
       addCategoriesToMap(incomeTree);
 
       // Форматируем все транзакции
-      const formattedAllTransactions = formatTransactions(allTransactionsList, categoryMap);
-      
+      const formattedAllTransactions = formatTransactions(
+        allTransactionsList,
+        categoryMap,
+      );
+
       // Сортируем по дате (новые сверху)
       formattedAllTransactions.sort((a, b) => b.date - a.date);
-      
+
       setAllTransactions(formattedAllTransactions);
-      
+
       // Берем только первые 20 для отображения на главном экране
       const recentTransactions = formattedAllTransactions.slice(0, 20);
       setTransactions(recentTransactions);
 
       const totalBalanceCalc = await transactionService.getTotalBalance();
       setTotalBalance(totalBalanceCalc);
-      
+
       // Логирование для отладки
       console.log(`📊 Всего транзакций: ${formattedAllTransactions.length}`);
       console.log(`📊 На главном экране: ${recentTransactions.length}`);
-      
     } catch (error) {
       console.error('Failed to load home data:', error);
     } finally {
@@ -232,7 +259,13 @@ export const HomeScreen: React.FC<MainTabScreenProps<'Home'>> = ({
           { backgroundColor: colors.background },
         ]}
       >
-        <BalanceCard balance={0} income={0} expense={0} isLoading={true} totalBalance={totalBalance}/>
+        <BalanceCard
+          balance={0}
+          income={0}
+          expense={0}
+          isLoading={true}
+          totalBalance={totalBalance}
+        />
       </View>
     );
   }
@@ -313,11 +346,13 @@ export const HomeScreen: React.FC<MainTabScreenProps<'Home'>> = ({
           <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
             Недавние транзакции
           </Text>
-          <TouchableOpacity onPress={handleViewAllTransactions}>
-            <Text style={[styles.seeAllText, { color: colors.primary }]}>
-              Посмотреть все
-            </Text>
-          </TouchableOpacity>
+          {allTransactions.length > 20 ? (
+            <TouchableOpacity onPress={handleViewAllTransactions}>
+              <Text style={[styles.seeAllText, { color: colors.primary }]}>
+                Посмотреть все
+              </Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
 
         {transactions.length === 0 ? (
@@ -335,7 +370,7 @@ export const HomeScreen: React.FC<MainTabScreenProps<'Home'>> = ({
             <Text style={[styles.emptyText, { color: colors.text.secondary }]}>
               Начните, добавив первый доход или расход
             </Text>
-            <View style={styles.emptyButtons}>
+            {/* <View style={styles.emptyButtons}>
               <TouchableOpacity
                 style={[
                   styles.emptyButton,
@@ -353,7 +388,7 @@ export const HomeScreen: React.FC<MainTabScreenProps<'Home'>> = ({
                 <Icon name="arrow-down" size={20} color="#FFFFFF" />
                 <Text style={styles.emptyButtonText}>Добавить расход</Text>
               </TouchableOpacity>
-            </View>
+            </View> */}
           </View>
         ) : (
           <View style={styles.transactionsList}>
@@ -365,11 +400,14 @@ export const HomeScreen: React.FC<MainTabScreenProps<'Home'>> = ({
                 onDelete={() => handleTransactionDelete(transaction)}
               />
             ))}
-            
+
             {/* Индикатор, что есть еще транзакции */}
             {allTransactions.length > 20 && (
               <TouchableOpacity
-                style={[styles.showMoreButton, { backgroundColor: colors.surface }]}
+                style={[
+                  styles.showMoreButton,
+                  { backgroundColor: colors.surface },
+                ]}
                 onPress={handleViewAllTransactions}
               >
                 <Text style={[styles.showMoreText, { color: colors.primary }]}>
