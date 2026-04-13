@@ -15,6 +15,7 @@ import { useTheme } from '../../../core/hooks/useTheme';
 import { TransactionItem } from '../../home/components/TransactionItem';
 import transactionService from '../../../core/services/transaction.service';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import categoryService from '../../../core/services/category.service';
 
 interface AllTransactionsScreenProps {
   navigation: any;
@@ -58,6 +59,42 @@ export const AllTransactionsScreen: React.FC<AllTransactionsScreenProps> = ({
     }
   }, []);
 
+  // Функция для получения данных из _raw или напрямую
+  const getRawData = (item: any) => {
+    return item._raw || item;
+  };
+
+  // Форматирование транзакций для отображения
+  const formatTransactions = (
+    transactionsList: any[],
+    categoryMap: Map<string, any>,
+  ) => {
+    return transactionsList.map((t: any) => {
+      const raw = getRawData(t);
+      const category = categoryMap.get(raw.category_id);
+
+      return {
+        id: t.id || raw.id,
+        amount: raw.amount,
+        type: raw.type,
+        categoryId: raw.category_id,
+        note: raw.note,
+        date: raw.date,
+        category: category
+          ? {
+              name: category.name,
+              icon: category.icon,
+              color: category.color,
+            }
+          : {
+              name: 'Без категории',
+              icon: 'help-circle',
+              color: colors.text.secondary,
+            },
+      };
+    });
+  };
+
   // Загрузка транзакций с пагинацией
   const loadTransactions = useCallback(
     async (page: number, refresh: boolean = false) => {
@@ -68,15 +105,49 @@ export const AllTransactionsScreen: React.FC<AllTransactionsScreenProps> = ({
       }
 
       try {
+        // Получаем все категории для маппинга
+        const allCategories = await categoryService.getAllCategories();
+        const categoryMap = new Map<string, any>();
+
+        // Функция для рекурсивного добавления всех категорий (включая подкатегории)
+        const addCategoriesToMap = (cats: any[]) => {
+          cats.forEach(cat => {
+            const catData = cat._raw || cat;
+            categoryMap.set(catData.id, catData);
+            if (cat.children && cat.children.length > 0) {
+              addCategoriesToMap(cat.children);
+            }
+          });
+        };
+
+        // Получаем деревья категорий для расходов и доходов
+        const expenseTree = await categoryService.getCategoriesByTypeWithTree(
+          'expense',
+        );
+        const incomeTree = await categoryService.getCategoriesByTypeWithTree(
+          'income',
+        );
+
+        addCategoriesToMap(expenseTree);
+        addCategoriesToMap(incomeTree);
+
         // Получаем все транзакции с сортировкой по дате (новые сверху)
         const allTransactions = await transactionService.getAllTransactions();
 
+        // Форматируем все транзакции
+        const formattedAllTransactions = formatTransactions(
+          allTransactions,
+          categoryMap,
+        );
+
         // Сортируем по дате (новые первые)
-        const sortedTransactions = allTransactions.sort((a: any, b: any) => {
-          const dateA = a._raw?.date || a.date;
-          const dateB = b._raw?.date || b.date;
-          return dateB - dateA;
-        });
+        const sortedTransactions = formattedAllTransactions.sort(
+          (a: any, b: any) => {
+            const dateA = a._raw?.date || a.date;
+            const dateB = b._raw?.date || b.date;
+            return dateB - dateA;
+          },
+        );
 
         // Пагинация
         const startIndex = (page - 1) * PAGE_SIZE;
@@ -106,53 +177,108 @@ export const AllTransactionsScreen: React.FC<AllTransactionsScreenProps> = ({
   );
 
   // Загрузка с поиском
-  const searchTransactions = useCallback(
-    async (query: string) => {
-      if (!query.trim()) {
-        // Если поиск пустой, загружаем обычные транзакции
-        setCurrentPage(1);
-        await loadTransactions(1, true);
-        await loadTotalCount();
-        return;
-      }
+const searchTransactions = useCallback(
+  async (query: string) => {
+    if (!query.trim()) {
+      // Если поиск пустой, загружаем обычные транзакции
+      setCurrentPage(1);
+      await loadTransactions(1, true);
+      await loadTotalCount();
+      return;
+    }
 
-      // setIsLoading(true);
-      try {
-        const allTransactions = await transactionService.getAllTransactions();
+    setIsLoading(true);
+    try {
+      // Получаем все категории для маппинга (как в loadTransactions)
+      const allCategories = await categoryService.getAllCategories();
+      const categoryMap = new Map<string, any>();
 
-        // Фильтрация по поисковому запросу
-        const filtered = allTransactions.filter((transaction: any) => {
-          const raw = transaction._raw || transaction;
-          const queryLower = query.toLowerCase();
-          const categoryName = raw.category?.name?.toLowerCase() || '';
-          const note = raw.note?.toLowerCase() || '';
-          const amount = raw.amount?.toString() || '';
-
-          return (
-            categoryName.includes(queryLower) ||
-            note.includes(queryLower) ||
-            amount.includes(queryLower)
-          );
+      // Функция для рекурсивного добавления всех категорий (включая подкатегории)
+      const addCategoriesToMap = (cats: any[]) => {
+        cats.forEach(cat => {
+          const catData = cat._raw || cat;
+          categoryMap.set(catData.id, {
+            id: catData.id,
+            name: catData.name,
+            icon: catData.icon,
+            color: catData.color,
+            type: catData.type,
+          });
+          if (cat.children && cat.children.length > 0) {
+            addCategoriesToMap(cat.children);
+          }
         });
+      };
 
-        // Сортируем по дате
-        const sorted = filtered.sort((a: any, b: any) => {
-          const dateA = a._raw?.date || a.date;
-          const dateB = b._raw?.date || b.date;
-          return dateB - dateA;
-        });
+      // Получаем деревья категорий для расходов и доходов
+      const expenseTree = await categoryService.getCategoriesByTypeWithTree('expense');
+      const incomeTree = await categoryService.getCategoriesByTypeWithTree('income');
 
-        setTransactions(sorted);
-        setHasMore(false); // При поиске отключаем пагинацию
-        setTotalCount(sorted.length);
-      } catch (error) {
-        console.error('Failed to search transactions:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [loadTransactions],
-  );
+      addCategoriesToMap(expenseTree);
+      addCategoriesToMap(incomeTree);
+
+      // Получаем все транзакции
+      const allTransactions = await transactionService.getAllTransactions();
+
+      // Форматируем и фильтруем транзакции
+      const queryLower = query.toLowerCase();
+      
+      const filtered = allTransactions.filter((transaction: any) => {
+        const raw = transaction._raw || transaction;
+        const category = categoryMap.get(raw.category_id);
+        const categoryName = category?.name?.toLowerCase() || '';
+        const note = raw.note?.toLowerCase() || '';
+        const amount = raw.amount?.toString() || '';
+
+        return (
+          categoryName.includes(queryLower) ||
+          note.includes(queryLower) ||
+          amount.includes(queryLower)
+        );
+      });
+
+      // Форматируем отфильтрованные транзакции (как в loadTransactions)
+      const formattedTransactions = filtered.map((t: any) => {
+        const raw = t._raw || t;
+        const category = categoryMap.get(raw.category_id);
+
+        return {
+          id: t.id || raw.id,
+          amount: raw.amount,
+          type: raw.type,
+          categoryId: raw.category_id,
+          note: raw.note,
+          date: raw.date,
+          category: category
+            ? {
+                name: category.name,
+                icon: category.icon,
+                color: category.color,
+              }
+            : {
+                name: 'Без категории',
+                icon: 'help-circle',
+                color: colors.text.secondary,
+              },
+        };
+      });
+
+      // Сортируем по дате (новые первые)
+      const sorted = formattedTransactions.sort((a: any, b: any) => {
+        return b.date - a.date;
+      });
+
+      setTransactions(sorted);
+      setHasMore(false); // При поиске отключаем пагинацию
+      setTotalCount(sorted.length);
+    } catch (error) {
+      console.error('Failed to search transactions:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  },
+  [loadTransactions, colors.text.secondary],
+);
 
   // Обработчик поиска с debounce
   const handleSearch = useCallback(
@@ -428,8 +554,8 @@ export const AllTransactionsScreen: React.FC<AllTransactionsScreenProps> = ({
           scrollEventThrottle={16}
           windowSize={10}
         />
-         {/* Плавающая кнопка прокрутки вверх */}
-      {showScrollTop && (
+        {/* Плавающая кнопка прокрутки вверх */}
+        {showScrollTop && (
           <View
             style={[
               styles.floatingScrollButton,
@@ -448,7 +574,6 @@ export const AllTransactionsScreen: React.FC<AllTransactionsScreenProps> = ({
           </View>
         )}
       </View>
-     
     </SafeAreaView>
   );
 };
