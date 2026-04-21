@@ -13,21 +13,21 @@ export const WelcomeScreen: React.FC<AuthStackScreenProps<'Welcome'>> = ({ navig
         SmartFinance
       </Text>
       <Text style={[styles.subtitle, { color: colors.text.secondary }]}>
-        Your personal finance assistant
+        Твой персональный финансовый ассистент
       </Text>
       
       <TouchableOpacity
         style={[styles.button, { backgroundColor: colors.primary }]}
         onPress={() => navigation.navigate('Login')}
       >
-        <Text style={styles.buttonText}>Login</Text>
+        <Text style={styles.buttonText}>Войти</Text>
       </TouchableOpacity>
       
       <TouchableOpacity
         style={[styles.button, { backgroundColor: colors.success }]}
         onPress={() => navigation.navigate('Register')}
       >
-        <Text style={styles.buttonText}>Register</Text>
+        <Text style={styles.buttonText}>Зарегистрироваться</Text>
       </TouchableOpacity>
     </View>
   );

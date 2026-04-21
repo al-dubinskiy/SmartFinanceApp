@@ -647,3 +647,60 @@ export async function seedTestData() {
     throw error;
   }
 }
+
+export async function seedCategoriesData() {
+  try {
+    const categoriesCollection = database.get('categories');
+    const existingCount = await categoriesCollection.query().fetchCount();
+    
+    if (existingCount > 0) {
+      console.log('🗑️ Очистка категорий...');
+      await database.write(async () => {
+        const allCategories = await categoriesCollection.query().fetch();
+        for (const c of allCategories) await c.destroyPermanently();
+      });
+      console.log('✅ Существующий список категорий очищен');
+    }
+    
+    // Создаем категории
+    console.log('📁 Создание категорий...');
+    const categoryIds: Record<string, string> = {};
+    
+    await database.write(async () => {
+      for (const cat of EXPENSE_CATEGORIES) {
+        const newCat = await categoriesCollection.create((record: any) => {
+          record.name = cat.name;
+          record.type = cat.type;
+          record.icon = cat.icon;
+          record.color = cat.color;
+          record.order = cat.order;
+          record.isActive = true;
+          record.parentId = '';
+          record.createdAt = Date.now();
+          record.updatedAt = Date.now();
+        });
+        categoryIds[cat.name] = newCat.id;
+      }
+      
+      for (const cat of INCOME_CATEGORIES) {
+        const newCat = await categoriesCollection.create((record: any) => {
+          record.name = cat.name;
+          record.type = cat.type;
+          record.icon = cat.icon;
+          record.color = cat.color;
+          record.order = cat.order;
+          record.isActive = true;
+          record.parentId = '';
+          record.createdAt = Date.now();
+          record.updatedAt = Date.now();
+        });
+        categoryIds[cat.name] = newCat.id;
+      }
+    });
+    
+    console.log(`✅ Создано ${Object.keys(categoryIds).length} категорий`);
+  } catch (error) {
+    console.error('❌ Ошибка во время создания категорий по умолчанию:', error);
+    throw error;
+  }
+}

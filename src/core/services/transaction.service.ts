@@ -133,7 +133,7 @@ class TransactionService {
 
     const categoryStats = Object.entries(byCategory).map(([id, amount]) => ({
       categoryId: id,
-      categoryName: categoryMap.get(id)?.name || 'Unknown',
+      categoryName: categoryMap.get(id)?.name || 'Не определена',
       categoryIcon: categoryMap.get(id)?.icon || 'help',
       categoryColor: categoryMap.get(id)?.color || '#95A5A6',
       amount,

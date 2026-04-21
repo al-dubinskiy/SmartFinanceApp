@@ -28,7 +28,7 @@ import {
 import pinService from '../../../core/services/pin.service';
 import backupService from '../../../core/services/backup.service';
 import { useNavigation } from '@react-navigation/native';
-import { seedTestData } from '../../../database/seedData';
+import { seedCategoriesData, seedTestData } from '../../../database/seedData';
 import { CSVImportWizard } from '../components/CSVImportWizard';
 import transactionService from '../../../core/services/transaction.service';
 import categoryService from '../../../core/services/category.service';
@@ -98,7 +98,7 @@ export const ProfileScreen = () => {
     if (!firebaseUser) return;
 
     Alert.alert(
-      '☁️ Экспорт в облако',
+      'Экспорт в облако',
       'Экспортировать все данные в Firebase Cloud?',
       [
         { text: 'Отмена', style: 'cancel' },
@@ -647,7 +647,7 @@ const handleRestoreFromCloud = async (backup: any) => {
         >
           <View style={styles.modalHeader}>
             <Text style={[styles.modalTitle, { color: colors.text.primary }]}>
-              ☁️ Облачные резервные копии
+              Облачные резервные копии
             </Text>
             <TouchableOpacity
               onPress={() => setIsCloudBackupModalVisible(false)}
@@ -1363,6 +1363,7 @@ const handleRestoreFromCloud = async (backup: any) => {
                                   const result =
                                     await backupService.clearAllData();
                                   if (result.success) {
+                                    seedCategoriesData()
                                     Alert.alert('✅ Готово', result.message);
                                     navigation.replace('Main');
                                   } else {

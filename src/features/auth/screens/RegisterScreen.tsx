@@ -59,21 +59,21 @@ export const RegisterScreen: React.FC<AuthStackScreenProps<'Register'>> = ({
         dispatch(loginSuccess(result.user));
         Toast.show({
           type: 'success',
-          text1: 'Account Created!',
-          text2: 'Welcome to SmartFinance',
+          text1: 'Аккаунт создан!',
+          text2: 'Добро пожаловать в SmartFinance',
         });
       } else {
         Toast.show({
           type: 'error',
-          text1: 'Registration Failed',
+          text1: 'Ошибка регистрации',
           text2: result.error,
         });
       }
     } catch (error) {
       Toast.show({
         type: 'error',
-        text1: 'Error',
-        text2: 'An unexpected error occurred',
+        text1: 'Ошибка',
+        text2: 'Произошла непредвиденная ошибка',
       });
     } finally {
       setIsLoading(false);
@@ -91,7 +91,7 @@ export const RegisterScreen: React.FC<AuthStackScreenProps<'Register'>> = ({
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Back Button */}
+        {/* Кнопка назад */}
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
@@ -99,26 +99,26 @@ export const RegisterScreen: React.FC<AuthStackScreenProps<'Register'>> = ({
           <Icon name="arrow-left" size={24} color={colors.text.primary} />
         </TouchableOpacity>
 
-        {/* Header */}
+        {/* Заголовок */}
         <View style={styles.header}>
           <Icon name="account-plus" size={64} color={colors.primary} />
           <Text style={[styles.title, { color: colors.text.primary }]}>
-            Create Account
+            Создать аккаунт
           </Text>
           <Text style={[styles.subtitle, { color: colors.text.secondary }]}>
-            Start managing your finances today
+            Начните управлять своими финансами сегодня
           </Text>
         </View>
 
-        {/* Form */}
+        {/* Форма */}
         <View style={styles.form}>
           <Controller
             control={control}
             name="name"
             render={({ field: { onChange, onBlur, value } }) => (
               <Input
-                label="Full Name"
-                placeholder="Enter your full name"
+                label="Полное имя"
+                placeholder="Введите ваше полное имя"
                 leftIcon="account"
                 value={value}
                 onChangeText={onChange}
@@ -134,8 +134,8 @@ export const RegisterScreen: React.FC<AuthStackScreenProps<'Register'>> = ({
             name="email"
             render={({ field: { onChange, onBlur, value } }) => (
               <Input
-                label="Email"
-                placeholder="Enter your email"
+                label="Электронная почта"
+                placeholder="Введите ваш email"
                 keyboardType="email-address"
                 autoCapitalize="none"
                 leftIcon="email"
@@ -153,8 +153,8 @@ export const RegisterScreen: React.FC<AuthStackScreenProps<'Register'>> = ({
             name="password"
             render={({ field: { onChange, onBlur, value } }) => (
               <Input
-                label="Password"
-                placeholder="Create a password"
+                label="Пароль"
+                placeholder="Создайте пароль"
                 secureTextEntry={!showPassword}
                 leftIcon="lock"
                 rightIcon={showPassword ? 'eye-off' : 'eye'}
@@ -173,8 +173,8 @@ export const RegisterScreen: React.FC<AuthStackScreenProps<'Register'>> = ({
             name="confirmPassword"
             render={({ field: { onChange, onBlur, value } }) => (
               <Input
-                label="Confirm Password"
-                placeholder="Confirm your password"
+                label="Подтверждение пароля"
+                placeholder="Подтвердите ваш пароль"
                 secureTextEntry={!showConfirmPassword}
                 leftIcon="lock-check"
                 rightIcon={showConfirmPassword ? 'eye-off' : 'eye'}
@@ -188,10 +188,10 @@ export const RegisterScreen: React.FC<AuthStackScreenProps<'Register'>> = ({
             )}
           />
 
-          {/* Password Requirements */}
-          <View style={styles.requirements}>
+          {/* Требования к паролю */}
+          <View style={[styles.requirements, { backgroundColor: colors.surface }]}>
             <Text style={[styles.requirementsTitle, { color: colors.text.secondary }]}>
-              Password must contain:
+              Пароль должен содержать:
             </Text>
             <View style={styles.requirementItem}>
               <Icon 
@@ -200,7 +200,7 @@ export const RegisterScreen: React.FC<AuthStackScreenProps<'Register'>> = ({
                 color={colors.success} 
               />
               <Text style={[styles.requirementText, { color: colors.text.secondary }]}>
-                At least 6 characters
+                Не менее 6 символов
               </Text>
             </View>
             <View style={styles.requirementItem}>
@@ -210,7 +210,7 @@ export const RegisterScreen: React.FC<AuthStackScreenProps<'Register'>> = ({
                 color={colors.success} 
               />
               <Text style={[styles.requirementText, { color: colors.text.secondary }]}>
-                At least one uppercase letter
+                Как минимум одну заглавную букву
               </Text>
             </View>
             <View style={styles.requirementItem}>
@@ -220,14 +220,14 @@ export const RegisterScreen: React.FC<AuthStackScreenProps<'Register'>> = ({
                 color={colors.success} 
               />
               <Text style={[styles.requirementText, { color: colors.text.secondary }]}>
-                At least one number
+                Как минимум одну цифру
               </Text>
             </View>
           </View>
 
-          {/* Register Button */}
+          {/* Кнопка регистрации */}
           <Button
-            title="Create Account"
+            title="Создать аккаунт"
             onPress={handleSubmit(onSubmit)}
             loading={isLoading}
             disabled={isLoading}
@@ -235,17 +235,17 @@ export const RegisterScreen: React.FC<AuthStackScreenProps<'Register'>> = ({
           />
         </View>
 
-        {/* Sign In Link */}
+        {/* Ссылка на вход */}
         <View style={styles.footer}>
           <Text style={[styles.footerText, { color: colors.text.secondary }]}>
-            Already have an account?{' '}
+            Уже есть аккаунт?{' '}
           </Text>
           <TouchableOpacity
             onPress={() => navigation.navigate('Login')}
             disabled={isLoading}
           >
             <Text style={[styles.footerLink, { color: colors.primary }]}>
-              Sign In
+              Войти
             </Text>
           </TouchableOpacity>
         </View>
@@ -292,7 +292,6 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     padding: 16,
     borderRadius: 12,
-    backgroundColor: 'rgba(0,0,0,0.03)',
   },
   requirementsTitle: {
     fontSize: 14,

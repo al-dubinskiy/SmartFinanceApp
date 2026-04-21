@@ -15,14 +15,15 @@ import { loginSuccess, logout } from './src/store/slices/authSlice';
 import { database } from './src/database';
 import { seedDefaultCategories } from './src/database/seed';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { seedTestData } from './src/database/seedData';
+import { seedCategoriesData, seedTestData } from './src/database/seedData';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Компонент для отслеживания состояния аутентификации
 const AuthListener = ({ children }: { children: React.ReactNode }) => {
   const dispatch = useAppDispatch();
 
   useEffect(() => {
-    const unsubscribe = firebaseService.onAuthStateChanged((user) => {
+    const unsubscribe = firebaseService.onAuthStateChanged(user => {
       if (user) {
         dispatch(loginSuccess(user));
       } else {
@@ -47,10 +48,10 @@ const DatabaseInitializer = ({ children }: { children: React.ReactNode }) => {
       try {
         setStatus('Creating tables...');
         // База данных уже создана при импорте
-        
+
         setStatus('Seeding test data...');
         // await seedTestData();
-        
+
         setStatus('Ready!');
         setIsReady(true);
       } catch (error) {
@@ -64,14 +65,31 @@ const DatabaseInitializer = ({ children }: { children: React.ReactNode }) => {
     initDatabase();
   }, []);
 
+  useEffect(() => {
+    (async () => {
+      try {
+        const value = await AsyncStorage.getItem('isFirstLoad');
+
+        if (value !== 'true') {
+          seedCategoriesData()
+          await AsyncStorage.setItem('isFirstLoad', 'true');
+        } 
+      } catch (error) {
+        console.error('Ошибка при чтении/записи переменной "isFirstLoad" (AsyncStorage):', error);
+      }
+    })();
+  }, []);
+
   if (!isReady) {
     return (
-      <View style={{ 
-        flex: 1, 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        backgroundColor: colors.background 
-      }}>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          backgroundColor: colors.background,
+        }}
+      >
         <ActivityIndicator size="large" color={colors.primary} />
         <Text style={{ color: colors.text.primary, marginTop: 16 }}>
           {status}

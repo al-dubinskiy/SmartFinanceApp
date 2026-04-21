@@ -54,21 +54,21 @@ export const LoginScreen: React.FC<AuthStackScreenProps<'Login'>> = ({
         dispatch(loginSuccess(result.user));
         Toast.show({
           type: 'success',
-          text1: 'Welcome back!',
-          text2: `Logged in as ${result.user.email}`,
+          text1: 'С возвращением!',
+          text2: `Вы вошли как ${result.user.email}`,
         });
       } else {
         Toast.show({
           type: 'error',
-          text1: 'Login Failed',
+          text1: 'Ошибка входа',
           text2: result.error,
         });
       }
     } catch (error) {
       Toast.show({
         type: 'error',
-        text1: 'Error',
-        text2: 'An unexpected error occurred',
+        text1: 'Ошибка',
+        text2: 'Произошла непредвиденная ошибка',
       });
     } finally {
       setIsLoading(false);
@@ -83,26 +83,26 @@ export const LoginScreen: React.FC<AuthStackScreenProps<'Login'>> = ({
 
       const result = await firebaseService.signInWithGoogle();
 
-      console.log('fsdfsdfsdfsdfd', result)
+      console.log('Результат входа через Google', result);
       if (result.success && result.user) {
         dispatch(loginSuccess(result.user));
         Toast.show({
           type: 'success',
-          text1: 'Welcome!',
-          text2: `Logged in with Google`,
+          text1: 'Добро пожаловать!',
+          text2: `Вы вошли через Google`,
         });
       } else {
         Toast.show({
           type: 'error',
-          text1: 'Google Sign-In Failed',
+          text1: 'Ошибка входа через Google',
           text2: result.error,
         });
       }
     } catch (error) {
       Toast.show({
         type: 'error',
-        text1: 'Error',
-        text2: 'An unexpected error occurred',
+        text1: 'Ошибка',
+        text2: 'Произошла непредвиденная ошибка',
       });
     } finally {
       setIsLoading(false);
@@ -120,7 +120,7 @@ export const LoginScreen: React.FC<AuthStackScreenProps<'Login'>> = ({
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Back Button */}
+        {/* Кнопка назад */}
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
@@ -128,26 +128,26 @@ export const LoginScreen: React.FC<AuthStackScreenProps<'Login'>> = ({
           <Icon name="arrow-left" size={24} color={colors.text.primary} />
         </TouchableOpacity>
 
-        {/* Header */}
+        {/* Заголовок */}
         <View style={styles.header}>
           <Icon name="finance" size={64} color={colors.primary} />
           <Text style={[styles.title, { color: colors.text.primary }]}>
-            Welcome Back!
+            С возвращением!
           </Text>
           <Text style={[styles.subtitle, { color: colors.text.secondary }]}>
-            Sign in to continue managing your finances
+            Войдите, чтобы продолжить управлять своими финансами
           </Text>
         </View>
 
-        {/* Form */}
+        {/* Форма */}
         <View style={styles.form}>
           <Controller
             control={control}
             name="email"
             render={({ field: { onChange, onBlur, value } }) => (
               <Input
-                label="Email"
-                placeholder="Enter your email"
+                label="Электронная почта"
+                placeholder="Введите ваш email"
                 keyboardType="email-address"
                 autoCapitalize="none"
                 leftIcon="email"
@@ -165,8 +165,8 @@ export const LoginScreen: React.FC<AuthStackScreenProps<'Login'>> = ({
             name="password"
             render={({ field: { onChange, onBlur, value } }) => (
               <Input
-                label="Password"
-                placeholder="Enter your password"
+                label="Пароль"
+                placeholder="Введите ваш пароль"
                 secureTextEntry={!showPassword}
                 leftIcon="lock"
                 rightIcon={showPassword ? 'eye-off' : 'eye'}
@@ -180,38 +180,38 @@ export const LoginScreen: React.FC<AuthStackScreenProps<'Login'>> = ({
             )}
           />
 
-          {/* Forgot Password */}
+          {/* Забыли пароль */}
           <TouchableOpacity
             style={styles.forgotPassword}
             onPress={() => navigation.navigate('ResetPassword')}
             disabled={isLoading}
           >
             <Text style={[styles.forgotPasswordText, { color: colors.primary }]}>
-              Forgot Password?
+              Забыли пароль?
             </Text>
           </TouchableOpacity>
 
-          {/* Login Button */}
+          {/* Кнопка входа */}
           <Button
-            title="Sign In"
+            title="Войти"
             onPress={handleSubmit(onSubmit)}
             loading={isLoading}
             disabled={isLoading}
             style={styles.loginButton}
           />
 
-          {/* Divider */}
+          {/* Разделитель */}
           <View style={styles.dividerContainer}>
             <View style={[styles.divider, { backgroundColor: colors.border }]} />
             <Text style={[styles.dividerText, { color: colors.text.secondary }]}>
-              OR
+              ИЛИ
             </Text>
             <View style={[styles.divider, { backgroundColor: colors.border }]} />
           </View>
 
-          {/* Social Login */}
+          {/* Социальный вход */}
           <Button
-            title="Continue with Google"
+            title="Войти через Google"
             onPress={handleGoogleSignIn}
             variant="outline"
             leftIcon="google"
@@ -220,17 +220,17 @@ export const LoginScreen: React.FC<AuthStackScreenProps<'Login'>> = ({
           />
         </View>
 
-        {/* Sign Up Link */}
+        {/* Ссылка на регистрацию */}
         <View style={styles.footer}>
           <Text style={[styles.footerText, { color: colors.text.secondary }]}>
-            Don't have an account?{' '}
+            Нет аккаунта?{' '}
           </Text>
           <TouchableOpacity
             onPress={() => navigation.navigate('Register')}
             disabled={isLoading}
           >
             <Text style={[styles.footerLink, { color: colors.primary }]}>
-              Sign Up
+              Зарегистрироваться
             </Text>
           </TouchableOpacity>
         </View>

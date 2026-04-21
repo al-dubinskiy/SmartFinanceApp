@@ -11,6 +11,8 @@ import {
   Platform,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import FontAwesome6Icon from 'react-native-vector-icons/FontAwesome6';
+import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import { pick, types } from '@react-native-documents/picker'
 import RNFS from 'react-native-fs';
 import Papa from 'papaparse';
@@ -632,7 +634,7 @@ export const CSVImportWizard: React.FC<CSVImportWizardProps> = ({
 
   const renderSelectStep = () => (
     <View style={styles.stepContainer}>
-      <Icon name="file-csv" size={64} color={colors.primary} />
+      <FontAwesome6Icon name="file-csv" size={64} color={colors.primary} />
       <Text style={[styles.stepTitle, { color: colors.text.primary }]}>
         Импорт CSV файла
       </Text>
@@ -670,7 +672,7 @@ export const CSVImportWizard: React.FC<CSVImportWizardProps> = ({
         style={[styles.autoMappingButton, { borderColor: colors.border }]}
         onPress={handleAutoMapping}
       >
-        <Icon name="magic" size={20} color={colors.primary} />
+        <FontAwesome name="magic" size={20} color={colors.primary} />
         <Text style={[styles.autoMappingText, { color: colors.primary }]}>
           Автоматически определить колонки
         </Text>

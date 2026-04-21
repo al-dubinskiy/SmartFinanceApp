@@ -48,21 +48,21 @@ export const ResetPasswordScreen: React.FC<AuthStackScreenProps<'ResetPassword'>
         setIsSent(true);
         Toast.show({
           type: 'success',
-          text1: 'Email Sent',
-          text2: 'Check your inbox for password reset instructions',
+          text1: 'Письмо отправлено',
+          text2: 'Проверьте вашу почту для получения инструкций по сбросу пароля',
         });
       } else {
         Toast.show({
           type: 'error',
-          text1: 'Failed',
+          text1: 'Ошибка',
           text2: result.error,
         });
       }
     } catch (error) {
       Toast.show({
         type: 'error',
-        text1: 'Error',
-        text2: 'An unexpected error occurred',
+        text1: 'Ошибка',
+        text2: 'Произошла непредвиденная ошибка',
       });
     } finally {
       setIsLoading(false);
@@ -79,7 +79,7 @@ export const ResetPasswordScreen: React.FC<AuthStackScreenProps<'ResetPassword'>
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Back Button */}
+        {/* Кнопка назад */}
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
@@ -87,18 +87,18 @@ export const ResetPasswordScreen: React.FC<AuthStackScreenProps<'ResetPassword'>
           <Icon name="arrow-left" size={24} color={colors.text.primary} />
         </TouchableOpacity>
 
-        {/* Header */}
+        {/* Заголовок */}
         <View style={styles.header}>
           <Icon name="lock-reset" size={64} color={colors.primary} />
           <Text style={[styles.title, { color: colors.text.primary }]}>
-            Reset Password
+            Сброс пароля
           </Text>
           <Text style={[styles.subtitle, { color: colors.text.secondary }]}>
-            Enter your email address and we'll send you instructions to reset your password
+            Введите ваш email, и мы отправим инструкции для сброса пароля
           </Text>
         </View>
 
-        {/* Form */}
+        {/* Форма */}
         {!isSent ? (
           <View style={styles.form}>
             <Controller
@@ -106,8 +106,8 @@ export const ResetPasswordScreen: React.FC<AuthStackScreenProps<'ResetPassword'>
               name="email"
               render={({ field: { onChange, onBlur, value } }) => (
                 <Input
-                  label="Email"
-                  placeholder="Enter your email"
+                  label="Электронная почта"
+                  placeholder="Введите ваш email"
                   keyboardType="email-address"
                   autoCapitalize="none"
                   leftIcon="email"
@@ -121,7 +121,7 @@ export const ResetPasswordScreen: React.FC<AuthStackScreenProps<'ResetPassword'>
             />
 
             <Button
-              title="Send Reset Instructions"
+              title="Отправить инструкции"
               onPress={handleSubmit(onSubmit)}
               loading={isLoading}
               disabled={isLoading}
@@ -132,20 +132,20 @@ export const ResetPasswordScreen: React.FC<AuthStackScreenProps<'ResetPassword'>
           <View style={styles.successContainer}>
             <Icon name="email-check" size={80} color={colors.success} />
             <Text style={[styles.successTitle, { color: colors.text.primary }]}>
-              Check Your Email
+              Проверьте вашу почту
             </Text>
             <Text style={[styles.successText, { color: colors.text.secondary }]}>
-              We've sent password reset instructions to your email address
+              Мы отправили инструкции по сбросу пароля на ваш email
             </Text>
             <Button
-              title="Back to Login"
+              title="Вернуться к входу"
               onPress={() => navigation.navigate('Login')}
               style={styles.backToLoginButton}
             />
           </View>
         )}
 
-        {/* Back to Login Link */}
+        {/* Ссылка для возврата к входу */}
         {!isSent && (
           <View style={styles.footer}>
             <TouchableOpacity
@@ -153,7 +153,7 @@ export const ResetPasswordScreen: React.FC<AuthStackScreenProps<'ResetPassword'>
               disabled={isLoading}
             >
               <Text style={[styles.footerLink, { color: colors.primary }]}>
-                Back to Sign In
+                Вернуться ко входу
               </Text>
             </TouchableOpacity>
           </View>
