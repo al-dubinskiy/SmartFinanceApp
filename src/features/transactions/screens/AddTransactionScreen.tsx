@@ -315,7 +315,7 @@ export const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({
               <View style={styles.recurringHeader}>
                 <View style={styles.recurringIconContainer}>
                   <Icon
-                    name={isRecurring ? 'calendar-repeat' : 'calendar-blank'}
+                    name={'calendar-blank'}
                     size={20}
                     color={isRecurring ? colors.success : colors.text.secondary}
                   />

@@ -10,6 +10,7 @@ import { ProfileScreen } from '../features/profile/screens/ProfileScreen';
 import { MainTabParamList } from './types';
 import { Colors } from '../core/constants/colors';
 import { useTheme } from '../core/hooks/useTheme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
@@ -27,6 +28,7 @@ const CustomTabBarButton = ({ children, onPress }: any) => (
 
 export const BottomTabNavigator = () => {
   const { isDark: isDarkMode } = useTheme();
+  const {bottom} = useSafeAreaInsets()
   
   const colors = isDarkMode ? Colors.dark : Colors.light;
 
@@ -39,7 +41,7 @@ export const BottomTabNavigator = () => {
           backgroundColor: colors.surface,
           borderTopColor: colors.border,
           height: 65,
-          paddingBottom: 8,
+          paddingBottom: 8 + bottom,
           paddingTop: 8,
         },
         headerStyle: {

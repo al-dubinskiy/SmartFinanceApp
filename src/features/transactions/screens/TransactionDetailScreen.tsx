@@ -14,6 +14,7 @@ import { formatCurrency, formatDate } from '../../../core/utils/formatters';
 import transactionService from '../../../core/services/transaction.service';
 import categoryService from '../../../core/services/category.service';
 import { useIsFocused } from '@react-navigation/native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface TransactionDetailScreenProps {
   navigation: any;
@@ -149,204 +150,229 @@ export const TransactionDetailScreen: React.FC<
   const recurringType = transaction._raw.recurring_type;
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: colors.surface }]}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backIcon}
-        >
-          <Icon name="arrow-left" size={24} color={colors.text.primary} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text.primary }]}>
-          Детали транзакции
-        </Text>
-        <View style={styles.headerActions}>
-          <TouchableOpacity onPress={handleEdit} style={styles.headerAction}>
-            <Icon name="pencil" size={22} color={colors.primary} />
+    <SafeAreaView style={{ flex: 1 }}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        {/* Header */}
+        <View style={[styles.header, { backgroundColor: colors.surface }]}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backIcon}
+          >
+            <Icon name="arrow-left" size={24} color={colors.text.primary} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={handleDelete} style={styles.headerAction}>
-            <Icon name="delete" size={22} color={colors.error} />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Amount */}
-        <View style={[styles.amountCard, { backgroundColor: colors.surface }]}>
-          <Text style={[styles.amountLabel, { color: colors.text.secondary }]}>
-            Сумма
+          <Text style={[styles.headerTitle, { color: colors.text.primary }]}>
+            Детали транзакции
           </Text>
-          <Text style={[styles.amount, { color: amountColor }]}>
-            {amountPrefix}
-            {formatCurrency(transaction.amount)}
-          </Text>
-        </View>
-
-        {/* Category */}
-        <View style={[styles.infoCard, { backgroundColor: colors.surface }]}>
-          <View style={styles.infoRow}>
-            <View
-              style={[
-                styles.categoryIcon,
-                { backgroundColor: category?.color + '20' },
-              ]}
+          <View style={styles.headerActions}>
+            <TouchableOpacity onPress={handleEdit} style={styles.headerAction}>
+              <Icon name="pencil" size={22} color={colors.primary} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleDelete}
+              style={styles.headerAction}
             >
-              <Icon
-                name={category?.icon || 'help'}
-                size={32}
-                color={category?.color}
-              />
-            </View>
-            <View style={styles.categoryInfo}>
-              <Text
-                style={[styles.infoLabel, { color: colors.text.secondary }]}
-              >
-                Категория
-              </Text>
-              <Text style={[styles.infoValue, { color: colors.text.primary }]}>
-                {category?.name || 'Неизвестно'}
-              </Text>
-            </View>
+              <Icon name="delete" size={22} color={colors.error} />
+            </TouchableOpacity>
           </View>
         </View>
 
-        {/* Recurring Info */}
-        {category?.name !== 'Накопления' && transaction.type === 'income' ? (
+        <ScrollView showsVerticalScrollIndicator={false}>
+          {/* Amount */}
+          <View
+            style={[styles.amountCard, { backgroundColor: colors.surface }]}
+          >
+            <Text
+              style={[styles.amountLabel, { color: colors.text.secondary }]}
+            >
+              Сумма
+            </Text>
+            <Text style={[styles.amount, { color: amountColor }]}>
+              {amountPrefix}
+              {formatCurrency(transaction.amount)}
+            </Text>
+          </View>
+
+          {/* Category */}
           <View style={[styles.infoCard, { backgroundColor: colors.surface }]}>
             <View style={styles.infoRow}>
-              <Icon
-                name={getRecurringIcon(recurringType)}
-                size={24}
-                color={isRecurring ? colors.primary : colors.text.secondary}
-              />
-              <View style={styles.infoContent}>
-                <Text
-                  style={[styles.infoLabel, { color: colors.text.secondary }]}
-                >
-                  Регулярный
-                </Text>
-                <Text
-                  style={[styles.infoValue, { color: colors.text.primary }]}
-                >
-                  {isRecurring ? 'Да' : 'Нет'}
-                </Text>
-                {isRecurring && recurringType && (
-                  <View style={styles.recurringBadge}>
-                    <Icon
-                      name={getRecurringIcon(recurringType)}
-                      size={14}
-                      color={colors.primary}
-                    />
-                    <Text
-                      style={[
-                        styles.recurringTypeText,
-                        { color: colors.primary },
-                      ]}
-                    >
-                      {getRecurringTypeText(recurringType)}
-                    </Text>
-                  </View>
-                )}
-              </View>
-            </View>
-          </View>
-        ) : null}
-        {/* Date */}
-       {category?.name !== 'Накопления' ?  <View style={[styles.infoCard, { backgroundColor: colors.surface }]}>
-          <View style={styles.infoRow}>
-            <Icon name="calendar" size={24} color={colors.text.secondary} />
-            <View style={styles.infoContent}>
-              <Text
-                style={[styles.infoLabel, { color: colors.text.secondary }]}
-              >
-                Дата
-              </Text>
-              <Text style={[styles.infoValue, { color: colors.text.primary }]}>
-                {formatDate(transaction.date, 'long')}
-              </Text>
-            </View>
-          </View>
-        </View> : null}
-
-        {/* Note */}
-        {transaction.note ? (
-          <View style={[styles.infoCard, { backgroundColor: colors.surface }]}>
-            <View style={styles.infoRow}>
-              <Icon name="note-text" size={24} color={colors.text.secondary} />
-              <View style={styles.infoContent}>
-                <Text
-                  style={[styles.infoLabel, { color: colors.text.secondary }]}
-                >
-                  Примечание
-                </Text>
-                <Text
-                  style={[styles.infoValue, { color: colors.text.primary }]}
-                >
-                  {transaction.note}
-                </Text>
-              </View>
-            </View>
-          </View>
-        ) : null}
-
-        {/* Type */}
-        <View style={[styles.infoCard, { backgroundColor: colors.surface }]}>
-          <View style={styles.infoRow}>
-            <Icon
-              name={transaction.type === 'income' ? 'arrow-up' : 'arrow-down'}
-              size={24}
-              color={
-                transaction.type === 'income' ? colors.success : colors.error
-              }
-            />
-            <View style={styles.infoContent}>
-              <Text
-                style={[styles.infoLabel, { color: colors.text.secondary }]}
-              >
-                Тип
-              </Text>
-              <Text
+              <View
                 style={[
-                  styles.infoValue,
-                  {
-                    color:
-                      transaction.type === 'income'
-                        ? colors.success
-                        : colors.error,
-                  },
+                  styles.categoryIcon,
+                  { backgroundColor: category?.color + '20' },
                 ]}
               >
-                {transaction.type === 'income' ? 'Доход' : 'Расход'}
-              </Text>
+                <Icon
+                  name={category?.icon || 'help'}
+                  size={32}
+                  color={category?.color}
+                />
+              </View>
+              <View style={styles.categoryInfo}>
+                <Text
+                  style={[styles.infoLabel, { color: colors.text.secondary }]}
+                >
+                  Категория
+                </Text>
+                <Text
+                  style={[styles.infoValue, { color: colors.text.primary }]}
+                >
+                  {category?.name || 'Неизвестно'}
+                </Text>
+              </View>
             </View>
           </View>
-        </View>
 
-        {/* Created At */}
-        <View style={[styles.infoCard, { backgroundColor: colors.surface }]}>
-          <View style={styles.infoRow}>
-            <Icon
-              name="clock-outline"
-              size={24}
-              color={colors.text.secondary}
-            />
-            <View style={styles.infoContent}>
-              <Text
-                style={[styles.infoLabel, { color: colors.text.secondary }]}
-              >
-                Создано
-              </Text>
-              <Text
-                style={[styles.infoValue, { color: colors.text.secondary }]}
-              >
-                {new Date(transaction.createdAt).toLocaleString()}
-              </Text>
+          {/* Recurring Info */}
+          {category?.name !== 'Накопления' && transaction.type === 'income' ? (
+            <View
+              style={[styles.infoCard, { backgroundColor: colors.surface }]}
+            >
+              <View style={styles.infoRow}>
+                <Icon
+                  name={getRecurringIcon(recurringType)}
+                  size={24}
+                  color={isRecurring ? colors.primary : colors.text.secondary}
+                />
+                <View style={styles.infoContent}>
+                  <Text
+                    style={[styles.infoLabel, { color: colors.text.secondary }]}
+                  >
+                    Регулярный
+                  </Text>
+                  <Text
+                    style={[styles.infoValue, { color: colors.text.primary }]}
+                  >
+                    {isRecurring ? 'Да' : 'Нет'}
+                  </Text>
+                  {isRecurring && recurringType && (
+                    <View style={styles.recurringBadge}>
+                      <Icon
+                        name={getRecurringIcon(recurringType)}
+                        size={14}
+                        color={colors.primary}
+                      />
+                      <Text
+                        style={[
+                          styles.recurringTypeText,
+                          { color: colors.primary },
+                        ]}
+                      >
+                        {getRecurringTypeText(recurringType)}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+            </View>
+          ) : null}
+          {/* Date */}
+          {category?.name !== 'Накопления' ? (
+            <View
+              style={[styles.infoCard, { backgroundColor: colors.surface }]}
+            >
+              <View style={styles.infoRow}>
+                <Icon name="calendar" size={24} color={colors.text.secondary} />
+                <View style={styles.infoContent}>
+                  <Text
+                    style={[styles.infoLabel, { color: colors.text.secondary }]}
+                  >
+                    Дата
+                  </Text>
+                  <Text
+                    style={[styles.infoValue, { color: colors.text.primary }]}
+                  >
+                    {formatDate(transaction.date, 'long')}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          ) : null}
+
+          {/* Note */}
+          {transaction.note ? (
+            <View
+              style={[styles.infoCard, { backgroundColor: colors.surface }]}
+            >
+              <View style={styles.infoRow}>
+                <Icon
+                  name="note-text"
+                  size={24}
+                  color={colors.text.secondary}
+                />
+                <View style={styles.infoContent}>
+                  <Text
+                    style={[styles.infoLabel, { color: colors.text.secondary }]}
+                  >
+                    Примечание
+                  </Text>
+                  <Text
+                    style={[styles.infoValue, { color: colors.text.primary }]}
+                  >
+                    {transaction.note}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          ) : null}
+
+          {/* Type */}
+          <View style={[styles.infoCard, { backgroundColor: colors.surface }]}>
+            <View style={styles.infoRow}>
+              <Icon
+                name={transaction.type === 'income' ? 'arrow-up' : 'arrow-down'}
+                size={24}
+                color={
+                  transaction.type === 'income' ? colors.success : colors.error
+                }
+              />
+              <View style={styles.infoContent}>
+                <Text
+                  style={[styles.infoLabel, { color: colors.text.secondary }]}
+                >
+                  Тип
+                </Text>
+                <Text
+                  style={[
+                    styles.infoValue,
+                    {
+                      color:
+                        transaction.type === 'income'
+                          ? colors.success
+                          : colors.error,
+                    },
+                  ]}
+                >
+                  {transaction.type === 'income' ? 'Доход' : 'Расход'}
+                </Text>
+              </View>
             </View>
           </View>
-        </View>
-      </ScrollView>
-    </View>
+
+          {/* Created At */}
+          <View style={[styles.infoCard, { backgroundColor: colors.surface }]}>
+            <View style={styles.infoRow}>
+              <Icon
+                name="clock-outline"
+                size={24}
+                color={colors.text.secondary}
+              />
+              <View style={styles.infoContent}>
+                <Text
+                  style={[styles.infoLabel, { color: colors.text.secondary }]}
+                >
+                  Создано
+                </Text>
+                <Text
+                  style={[styles.infoValue, { color: colors.text.secondary }]}
+                >
+                  {new Date(transaction.createdAt).toLocaleString()}
+                </Text>
+              </View>
+            </View>
+          </View>
+        </ScrollView>
+      </View>
+    </SafeAreaView>
   );
 };
 

@@ -14,6 +14,7 @@ import {
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../../core/hooks/useTheme';
 import categoryService from '../../../core/services/category.service';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const MAX_NESTING_LEVEL = 3; // Максимальная глубина вложенности: 0-2 (3 уровня: корень -> подкатегория -> подподкатегория)
 
@@ -148,7 +149,7 @@ export const CategoriesScreen = ({ navigation }: any) => {
       setExpenseTree(expense || []);
       setIncomeTree(income || []);
       if (isFirstLoad) {
-        setIsFirstLoad(false)
+        setIsFirstLoad(false);
       }
     } catch (error) {
       console.error('Ошибка загрузки дерева категорий:', error);
@@ -535,390 +536,411 @@ export const CategoriesScreen = ({ navigation }: any) => {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: colors.surface }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Icon name="arrow-left" size={24} color={colors.text.primary} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text.primary }]}>
-          Категории
-        </Text>
-        <TouchableOpacity onPress={() => openAddModal(null)}>
-          <Icon name="plus" size={24} color={colors.primary} />
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <Text style={[styles.sectionTitle, { color: colors.text.secondary }]}>
-          Расходы
-        </Text>
-        {expenseTree.length > 0 ? (
-          expenseTree.map((c: any) => renderCategoryItem(c, 0))
-        ) : (
-          <Text style={[styles.emptyText, { color: colors.text.secondary }]}>
-            Пока нет категорий расходов
+    <SafeAreaView style={{ flex: 1 }}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={[styles.header, { backgroundColor: colors.surface }]}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Icon name="arrow-left" size={24} color={colors.text.primary} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: colors.text.primary }]}>
+            Категории
           </Text>
-        )}
+          <TouchableOpacity onPress={() => openAddModal(null)}>
+            <Icon name="plus" size={24} color={colors.primary} />
+          </TouchableOpacity>
+        </View>
 
-        <Text
-          style={[
-            styles.sectionTitle,
-            { color: colors.text.secondary, marginTop: 24 },
-          ]}
-        >
-          Доходы
-        </Text>
-        {incomeTree.length > 0 ? (
-          incomeTree.map((c: any) => renderCategoryItem(c, 0))
-        ) : (
-          <Text style={[styles.emptyText, { color: colors.text.secondary }]}>
-            Пока нет категорий доходов
+        <ScrollView showsVerticalScrollIndicator={false}>
+          <Text style={[styles.sectionTitle, { color: colors.text.secondary }]}>
+            Расходы
           </Text>
-        )}
+          {expenseTree.length > 0 ? (
+            expenseTree.map((c: any) => renderCategoryItem(c, 0))
+          ) : (
+            <Text style={[styles.emptyText, { color: colors.text.secondary }]}>
+              Пока нет категорий расходов
+            </Text>
+          )}
 
-        <View style={{ height: 80 }} />
-      </ScrollView>
-
-      {/* Модалка создания/редактирования */}
-      <Modal visible={modalVisible} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View
-            style={[styles.modalContent, { backgroundColor: colors.surface }]}
+          <Text
+            style={[
+              styles.sectionTitle,
+              { color: colors.text.secondary, marginTop: 24 },
+            ]}
           >
-            <Text style={[styles.modalTitle, { color: colors.text.primary }]}>
-              {editingCategory ? 'Редактировать категорию' : 'Новая категория'}
+            Доходы
+          </Text>
+          {incomeTree.length > 0 ? (
+            incomeTree.map((c: any) => renderCategoryItem(c, 0))
+          ) : (
+            <Text style={[styles.emptyText, { color: colors.text.secondary }]}>
+              Пока нет категорий доходов
             </Text>
+          )}
 
-            <TextInput
-              style={[
-                styles.input,
-                {
-                  backgroundColor: colors.background,
-                  color: colors.text.primary,
-                },
-              ]}
-              placeholder="Название категории"
-              placeholderTextColor={colors.text.secondary}
-              value={categoryName}
-              onChangeText={setCategoryName}
-            />
+          <View style={{ height: 80 }} />
+        </ScrollView>
 
-            {!editingCategory && (
-              <View style={styles.typeSelector}>
-                <TouchableOpacity
-                  style={[
-                    styles.typeButton,
-                    categoryType === 'expense' && {
-                      backgroundColor: colors.error + '25',
-                    },
-                  ]}
-                  onPress={() => setCategoryType('expense')}
-                >
-                  <Text
-                    style={{
-                      color:
-                        categoryType === 'expense'
-                          ? colors.error
-                          : colors.text.secondary,
-                    }}
-                  >
-                    Расход
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.typeButton,
-                    categoryType === 'income' && {
-                      backgroundColor: colors.success + '25',
-                    },
-                  ]}
-                  onPress={() => setCategoryType('income')}
-                >
-                  <Text
-                    style={{
-                      color:
-                        categoryType === 'income'
-                          ? colors.success
-                          : colors.text.secondary,
-                    }}
-                  >
-                    Доход
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            )}
-
-            {/* Выбор иконки */}
-            <Text style={[styles.label, { color: colors.text.secondary }]}>
-              Иконка
-            </Text>
-            <TouchableOpacity
-              style={[
-                styles.iconSelector,
-                { backgroundColor: colors.background },
-              ]}
-              onPress={() => setIconModalVisible(true)}
+        {/* Модалка создания/редактирования */}
+        <Modal visible={modalVisible} animationType="slide" transparent>
+          <View style={styles.modalOverlay}>
+            <View
+              style={[styles.modalContent, { backgroundColor: colors.surface }]}
             >
-              <View
-                style={[
-                  styles.iconPreview,
-                  { backgroundColor: selectedColor + '20' },
-                ]}
-              >
-                <Icon name={selectedIcon} size={28} color={selectedColor} />
-              </View>
-              <Text
-                style={{ flex: 1, color: colors.text.primary, marginLeft: 12 }}
-              >
-                {selectedIcon}
+              <Text style={[styles.modalTitle, { color: colors.text.primary }]}>
+                {editingCategory
+                  ? 'Редактировать категорию'
+                  : 'Новая категория'}
               </Text>
-              <Icon
-                name="chevron-down"
-                size={20}
-                color={colors.text.secondary}
-              />
-            </TouchableOpacity>
 
-            {/* Выбор цвета */}
-            <Text style={[styles.label, { color: colors.text.secondary }]}>
-              Цвет
-            </Text>
-            <TouchableOpacity
-              style={[
-                styles.colorSelector,
-                { backgroundColor: colors.background },
-              ]}
-              onPress={() => setColorModalVisible(true)}
-            >
-              <View
+              <TextInput
                 style={[
-                  styles.colorPreview,
-                  { backgroundColor: selectedColor },
-                ]}
-              />
-              <Text
-                style={{ flex: 1, color: colors.text.primary, marginLeft: 12 }}
-              >
-                {selectedColor}
-              </Text>
-              <Icon
-                name="chevron-down"
-                size={20}
-                color={colors.text.secondary}
-              />
-            </TouchableOpacity>
-
-            {/* Родительская категория */}
-            <Text style={[styles.label, { color: colors.text.secondary }]}>
-              Родительская категория
-              <Text style={{ fontSize: 11, color: colors.text.secondary }}>
-                {' '}
-                (макс. {MAX_NESTING_LEVEL} уровня)
-              </Text>
-            </Text>
-            <TouchableOpacity
-              style={[
-                styles.parentSelector,
-                { backgroundColor: colors.background },
-              ]}
-              onPress={() => setParentModalVisible(true)}
-            >
-              <Text style={{ color: colors.text.primary, flex: 1 }}>
-                {selectedParentId
-                  ? [...expenseTree, ...incomeTree]
-                      .flatMap((cat: any) => [cat, ...(cat.children || [])])
-                      .find((c: any) => c?.id === selectedParentId)?.name ||
-                    'Неизвестная'
-                  : 'Без родителя (основная категория)'}
-              </Text>
-              <Icon
-                name="chevron-down"
-                size={20}
-                color={colors.text.secondary}
-              />
-            </TouchableOpacity>
-
-            {/* Подсказка об уровне вложенности */}
-            {selectedParentId && (
-              <Text
-                style={[
-                  styles.levelHint,
+                  styles.input,
                   {
-                    color: colors.text.secondary,
-                    fontSize: 11,
-                    marginTop: -12,
-                    marginBottom: 12,
+                    backgroundColor: colors.background,
+                    color: colors.text.primary,
                   },
                 ]}
-              >
-                Уровень вложенности:{' '}
-                {getCategoryLevelDisplay(selectedParentId) + 1}
-              </Text>
-            )}
+                placeholder="Название категории"
+                placeholderTextColor={colors.text.secondary}
+                value={categoryName}
+                onChangeText={setCategoryName}
+              />
 
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => {
-                  setModalVisible(false);
-                  resetForm();
-                }}
-              >
-                <Text style={{ color: colors.text.secondary }}>Отмена</Text>
-              </TouchableOpacity>
+              {!editingCategory && (
+                <View style={styles.typeSelector}>
+                  <TouchableOpacity
+                    style={[
+                      styles.typeButton,
+                      categoryType === 'expense' && {
+                        backgroundColor: colors.error + '25',
+                      },
+                    ]}
+                    onPress={() => setCategoryType('expense')}
+                  >
+                    <Text
+                      style={{
+                        color:
+                          categoryType === 'expense'
+                            ? colors.error
+                            : colors.text.secondary,
+                      }}
+                    >
+                      Расход
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.typeButton,
+                      categoryType === 'income' && {
+                        backgroundColor: colors.success + '25',
+                      },
+                    ]}
+                    onPress={() => setCategoryType('income')}
+                  >
+                    <Text
+                      style={{
+                        color:
+                          categoryType === 'income'
+                            ? colors.success
+                            : colors.text.secondary,
+                      }}
+                    >
+                      Доход
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {/* Выбор иконки */}
+              <Text style={[styles.label, { color: colors.text.secondary }]}>
+                Иконка
+              </Text>
               <TouchableOpacity
                 style={[
-                  styles.modalButton,
-                  styles.saveButton,
+                  styles.iconSelector,
+                  { backgroundColor: colors.background },
+                ]}
+                onPress={() => setIconModalVisible(true)}
+              >
+                <View
+                  style={[
+                    styles.iconPreview,
+                    { backgroundColor: selectedColor + '20' },
+                  ]}
+                >
+                  <Icon name={selectedIcon} size={28} color={selectedColor} />
+                </View>
+                <Text
+                  style={{
+                    flex: 1,
+                    color: colors.text.primary,
+                    marginLeft: 12,
+                  }}
+                >
+                  {selectedIcon}
+                </Text>
+                <Icon
+                  name="chevron-down"
+                  size={20}
+                  color={colors.text.secondary}
+                />
+              </TouchableOpacity>
+
+              {/* Выбор цвета */}
+              <Text style={[styles.label, { color: colors.text.secondary }]}>
+                Цвет
+              </Text>
+              <TouchableOpacity
+                style={[
+                  styles.colorSelector,
+                  { backgroundColor: colors.background },
+                ]}
+                onPress={() => setColorModalVisible(true)}
+              >
+                <View
+                  style={[
+                    styles.colorPreview,
+                    { backgroundColor: selectedColor },
+                  ]}
+                />
+                <Text
+                  style={{
+                    flex: 1,
+                    color: colors.text.primary,
+                    marginLeft: 12,
+                  }}
+                >
+                  {selectedColor}
+                </Text>
+                <Icon
+                  name="chevron-down"
+                  size={20}
+                  color={colors.text.secondary}
+                />
+              </TouchableOpacity>
+
+              {/* Родительская категория */}
+              <Text style={[styles.label, { color: colors.text.secondary }]}>
+                Родительская категория
+                <Text style={{ fontSize: 11, color: colors.text.secondary }}>
+                  {' '}
+                  (макс. {MAX_NESTING_LEVEL} уровня)
+                </Text>
+              </Text>
+              <TouchableOpacity
+                style={[
+                  styles.parentSelector,
+                  { backgroundColor: colors.background },
+                ]}
+                onPress={() => setParentModalVisible(true)}
+              >
+                <Text style={{ color: colors.text.primary, flex: 1 }}>
+                  {selectedParentId
+                    ? [...expenseTree, ...incomeTree]
+                        .flatMap((cat: any) => [cat, ...(cat.children || [])])
+                        .find((c: any) => c?.id === selectedParentId)?.name ||
+                      'Неизвестная'
+                    : 'Без родителя (основная категория)'}
+                </Text>
+                <Icon
+                  name="chevron-down"
+                  size={20}
+                  color={colors.text.secondary}
+                />
+              </TouchableOpacity>
+
+              {/* Подсказка об уровне вложенности */}
+              {selectedParentId && (
+                <Text
+                  style={[
+                    styles.levelHint,
+                    {
+                      color: colors.text.secondary,
+                      fontSize: 11,
+                      marginTop: -12,
+                      marginBottom: 12,
+                    },
+                  ]}
+                >
+                  Уровень вложенности:{' '}
+                  {getCategoryLevelDisplay(selectedParentId) + 1}
+                </Text>
+              )}
+
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.cancelButton]}
+                  onPress={() => {
+                    setModalVisible(false);
+                    resetForm();
+                  }}
+                >
+                  <Text style={{ color: colors.text.secondary }}>Отмена</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.modalButton,
+                    styles.saveButton,
+                    { backgroundColor: colors.primary },
+                  ]}
+                  onPress={handleSaveCategory}
+                >
+                  <Text style={{ color: '#FFFFFF' }}>Сохранить</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Модалка выбора родителя */}
+        <Modal visible={parentModalVisible} animationType="slide" transparent>
+          <View style={styles.modalOverlay}>
+            <View
+              style={[
+                styles.parentModalContent,
+                { backgroundColor: colors.surface },
+              ]}
+            >
+              <Text style={[styles.modalTitle, { color: colors.text.primary }]}>
+                Выберите родителя
+                <Text style={{ fontSize: 12 }}>
+                  {' '}
+                  (макс. {MAX_NESTING_LEVEL} уровня)
+                </Text>
+              </Text>
+
+              <TextInput
+                style={[
+                  styles.searchInput,
+                  {
+                    backgroundColor: colors.background,
+                    color: colors.text.primary,
+                  },
+                ]}
+                placeholder="Поиск категории..."
+                placeholderTextColor={colors.text.secondary}
+                value={parentSearch}
+                onChangeText={setParentSearch}
+              />
+
+              <ScrollView
+                style={{ maxHeight: '68%' }}
+                showsVerticalScrollIndicator={false}
+              >
+                <TouchableOpacity
+                  style={styles.parentItem}
+                  onPress={() => selectParent(null)}
+                >
+                  <Icon
+                    name="minus-circle-outline"
+                    size={22}
+                    color={colors.text.secondary}
+                  />
+                  <Text
+                    style={[
+                      styles.parentItemText,
+                      { color: colors.text.secondary, fontStyle: 'italic' },
+                    ]}
+                  >
+                    Без родителя (основная категория)
+                  </Text>
+                </TouchableOpacity>
+                {/* Используем правильное дерево в зависимости от типа категории */}
+                {(categoryType === 'expense' ? expenseTree : incomeTree).map(
+                  (cat: any) => renderParentItem(cat, 0),
+                )}
+              </ScrollView>
+
+              <TouchableOpacity
+                style={[
+                  styles.closeButton,
                   { backgroundColor: colors.primary },
                 ]}
-                onPress={handleSaveCategory}
+                onPress={() => {
+                  setParentModalVisible(false);
+                  setParentSearch('');
+                }}
               >
-                <Text style={{ color: '#FFFFFF' }}>Сохранить</Text>
+                <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>
+                  Закрыть
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
-        </View>
-      </Modal>
+        </Modal>
 
-      {/* Модалка выбора родителя */}
-      <Modal visible={parentModalVisible} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View
-            style={[
-              styles.parentModalContent,
-              { backgroundColor: colors.surface },
-            ]}
-          >
-            <Text style={[styles.modalTitle, { color: colors.text.primary }]}>
-              Выберите родителя
-              <Text style={{ fontSize: 12 }}>
-                {' '}
-                (макс. {MAX_NESTING_LEVEL} уровня)
-              </Text>
-            </Text>
-
-            <TextInput
+        {/* Модалка выбора иконки */}
+        <Modal visible={iconModalVisible} animationType="slide" transparent>
+          <View style={styles.modalOverlay}>
+            <View
               style={[
-                styles.searchInput,
-                {
-                  backgroundColor: colors.background,
-                  color: colors.text.primary,
-                },
+                styles.iconModalContent,
+                { backgroundColor: colors.surface },
               ]}
-              placeholder="Поиск категории..."
-              placeholderTextColor={colors.text.secondary}
-              value={parentSearch}
-              onChangeText={setParentSearch}
-            />
-
-            <ScrollView
-              style={{ maxHeight: '68%' }}
-              showsVerticalScrollIndicator={false}
             >
+              <Text style={[styles.modalTitle, { color: colors.text.primary }]}>
+                Выберите иконку
+              </Text>
+              <FlatList
+                data={AVAILABLE_ICONS}
+                numColumns={5}
+                renderItem={renderIconItem}
+                keyExtractor={item => item}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.iconGrid}
+              />
               <TouchableOpacity
-                style={styles.parentItem}
-                onPress={() => selectParent(null)}
+                style={[
+                  styles.closeButton,
+                  { backgroundColor: colors.primary },
+                ]}
+                onPress={() => setIconModalVisible(false)}
               >
-                <Icon
-                  name="minus-circle-outline"
-                  size={22}
-                  color={colors.text.secondary}
-                />
-                <Text
-                  style={[
-                    styles.parentItemText,
-                    { color: colors.text.secondary, fontStyle: 'italic' },
-                  ]}
-                >
-                  Без родителя (основная категория)
+                <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>
+                  Закрыть
                 </Text>
               </TouchableOpacity>
-              {/* Используем правильное дерево в зависимости от типа категории */}
-              {(categoryType === 'expense' ? expenseTree : incomeTree).map(
-                (cat: any) => renderParentItem(cat, 0),
-              )}
-            </ScrollView>
-
-            <TouchableOpacity
-              style={[styles.closeButton, { backgroundColor: colors.primary }]}
-              onPress={() => {
-                setParentModalVisible(false);
-                setParentSearch('');
-              }}
-            >
-              <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>
-                Закрыть
-              </Text>
-            </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      </Modal>
+        </Modal>
 
-      {/* Модалка выбора иконки */}
-      <Modal visible={iconModalVisible} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View
-            style={[
-              styles.iconModalContent,
-              { backgroundColor: colors.surface },
-            ]}
-          >
-            <Text style={[styles.modalTitle, { color: colors.text.primary }]}>
-              Выберите иконку
-            </Text>
-            <FlatList
-              data={AVAILABLE_ICONS}
-              numColumns={5}
-              renderItem={renderIconItem}
-              keyExtractor={item => item}
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.iconGrid}
-            />
-            <TouchableOpacity
-              style={[styles.closeButton, { backgroundColor: colors.primary }]}
-              onPress={() => setIconModalVisible(false)}
+        {/* Модалка выбора цвета */}
+        <Modal visible={colorModalVisible} animationType="slide" transparent>
+          <View style={styles.modalOverlay}>
+            <View
+              style={[
+                styles.colorModalContent,
+                { backgroundColor: colors.surface },
+              ]}
             >
-              <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>
-                Закрыть
+              <Text style={[styles.modalTitle, { color: colors.text.primary }]}>
+                Выберите цвет
               </Text>
-            </TouchableOpacity>
+              <FlatList
+                data={AVAILABLE_COLORS}
+                numColumns={6}
+                renderItem={renderColorItem}
+                keyExtractor={item => item}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.colorGrid}
+              />
+              <TouchableOpacity
+                style={[
+                  styles.closeButton,
+                  { backgroundColor: colors.primary },
+                ]}
+                onPress={() => setColorModalVisible(false)}
+              >
+                <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>
+                  Закрыть
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      </Modal>
-
-      {/* Модалка выбора цвета */}
-      <Modal visible={colorModalVisible} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View
-            style={[
-              styles.colorModalContent,
-              { backgroundColor: colors.surface },
-            ]}
-          >
-            <Text style={[styles.modalTitle, { color: colors.text.primary }]}>
-              Выберите цвет
-            </Text>
-            <FlatList
-              data={AVAILABLE_COLORS}
-              numColumns={6}
-              renderItem={renderColorItem}
-              keyExtractor={item => item}
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.colorGrid}
-            />
-            <TouchableOpacity
-              style={[styles.closeButton, { backgroundColor: colors.primary }]}
-              onPress={() => setColorModalVisible(false)}
-            >
-              <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>
-                Закрыть
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-    </View>
+        </Modal>
+      </View>
+    </SafeAreaView>
   );
 };
 
