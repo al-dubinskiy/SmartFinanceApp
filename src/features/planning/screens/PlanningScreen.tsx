@@ -210,7 +210,7 @@ export const PlanningScreen: React.FC<MainTabScreenProps<'Planning'>> = () => {
         budgets.map(item => (
           <BudgetCard
             key={item.budget.id}
-            categoryName={item.category?.name || 'Неизвестно'}
+            categoryName={item.category?.name || 'Без категории'}
             categoryIcon={item.category?.icon || 'help'}
             categoryColor={item.category?.color || colors.primary}
             budgetAmount={item.budget.amount}

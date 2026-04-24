@@ -84,15 +84,19 @@ export const EditTransactionScreen: React.FC<EditTransactionScreenProps> = ({
       if (found) {
         const raw: any = found._raw || found;
 
-        const category = raw.category_id
-          ? await categoryService.getCategoryById(raw.category_id)
-          : null;
+        const category =
+          raw.category_id !== 'default-category-id'
+            ? await categoryService.getCategoryById(raw.category_id)
+            : null;
+
         const originalAmountValue = raw.amount || 0;
 
         setAmount(originalAmountValue.toString());
         setOriginalAmount(originalAmountValue);
         setNote(raw.note || '');
-        setSelectedCategoryId(raw.category_id);
+        if (raw.category_id !== 'default-category-id') {
+          setSelectedCategoryId(raw.category_id);
+        }
         if (category?.name) {
           setSelectedCategoryName(category.name);
         }

@@ -105,7 +105,7 @@ export const ReportsScreen = ({ navigation }: any) => {
 
   const getCategoryName = (categoryId: string) => {
     const category = categories.find(c => c.id === categoryId);
-    return category?.name || 'Неизвестно';
+    return category?.name || 'Без категории';
   };
 
   const getTotalIncome = () =>

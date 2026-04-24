@@ -101,6 +101,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
   };
 
   const categoryMap = buildCategoryMap(categories);
+  console.log(categoryMap)
   const selectedCategory = selectedCategoryId
     ? categoryMap.get(selectedCategoryId)?._raw
     : null;

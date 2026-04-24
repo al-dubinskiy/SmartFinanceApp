@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import SimpleLineIcons from 'react-native-vector-icons/SimpleLineIcons';
 import { useTheme } from '../../../core/hooks/useTheme';
 import { formatCurrency, formatDate } from '../../../core/utils/formatters';
 import transactionService from '../../../core/services/transaction.service';
@@ -46,7 +47,7 @@ export const TransactionDetailScreen: React.FC<
       const found = transactions.find(t => t._raw.id === transactionId);
       setTransaction(found);
 
-      if (found && found.categoryId) {
+      if (found && found.categoryId && found.categoryId !== 'default-category-id') {
         const cat = await categoryService.getCategoryById(found.categoryId);
         setCategory(cat);
       }
@@ -201,11 +202,20 @@ export const TransactionDetailScreen: React.FC<
                   { backgroundColor: category?.color + '20' },
                 ]}
               >
-                <Icon
-                  name={category?.icon || 'help'}
-                  size={32}
-                  color={category?.color}
-                />
+                {category?.icon ? (
+                  <Icon
+                    name={category?.icon || 'help'}
+                    size={32}
+                    color={category?.color}
+                  />
+                ) : (
+                  <SimpleLineIcons
+                    name={'tag'}
+                    size={32}
+                    color={'gray'}
+                    style={{ transform: [{ scaleX: -1 }] }}
+                  />
+                )}
               </View>
               <View style={styles.categoryInfo}>
                 <Text
@@ -216,7 +226,7 @@ export const TransactionDetailScreen: React.FC<
                 <Text
                   style={[styles.infoValue, { color: colors.text.primary }]}
                 >
-                  {category?.name || 'Неизвестно'}
+                  {category?.name || 'Без категории'}
                 </Text>
               </View>
             </View>
@@ -451,6 +461,7 @@ const styles = StyleSheet.create({
     borderRadius: 56,
     justifyContent: 'center',
     alignItems: 'center',
+    marginRight: -4
   },
   categoryInfo: {
     flex: 1,

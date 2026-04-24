@@ -35,6 +35,8 @@ import categoryService from '../../../core/services/category.service';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import { database } from '../../../database';
+import { BankConnectionWizard } from '../../banks/components/BankConnectionWizard';
+import { ConnectedBanksManager } from '../../banks/components/ConnectedBanksManager';
 
 export const ProfileScreen = () => {
   const { colors } = useTheme();
@@ -53,7 +55,8 @@ export const ProfileScreen = () => {
   const [isClearing, setIsClearing] = useState(false);
   const [isClearingTransactions, setIsClearingTransactions] = useState(false);
   const [transactionCount, setTransactionCount] = useState(0);
-
+  const [showBankWizard, setShowBankWizard] = useState(false);
+  const [showBanksManager, setShowBanksManager] = useState(false);
   // Cloud backup states
   const [isCloudBackupModalVisible, setIsCloudBackupModalVisible] =
     useState(false);
@@ -264,345 +267,420 @@ export const ProfileScreen = () => {
   };
 
   // Загрузка списка облачных резервных копий
- const loadCloudBackups = async () => {
-  const firebaseUser = getCurrentFirebaseUser();
-  if (!firebaseUser) return;
+  const loadCloudBackups = async () => {
+    const firebaseUser = getCurrentFirebaseUser();
+    if (!firebaseUser) return;
 
-  setIsLoadingBackups(true);
-  try {
-    // Сначала получаем все бэкапы пользователя без сортировки
-    const backupsSnapshot = await firestore()
-      .collection('user_backups')
-      .where('userId', '==', firebaseUser.uid)
-      .get();
+    setIsLoadingBackups(true);
+    try {
+      // Сначала получаем все бэкапы пользователя без сортировки
+      const backupsSnapshot = await firestore()
+        .collection('user_backups')
+        .where('userId', '==', firebaseUser.uid)
+        .get();
 
-    // Сортируем на клиенте
-    const backups = backupsSnapshot.docs
-      .map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      }))
-      .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
-      .slice(0, 20); // Ограничиваем 20 последними
+      // Сортируем на клиенте
+      const backups = backupsSnapshot.docs
+        .map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+        }))
+        .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+        .slice(0, 20); // Ограничиваем 20 последними
 
-    setCloudBackups(backups);
-    setIsCloudBackupModalVisible(true);
-  } catch (error) {
-    console.error('Error loading cloud backups:', error);
-    Alert.alert('Ошибка', 'Не удалось загрузить список резервных копий');
-  } finally {
-    setIsLoadingBackups(false);
-  }
-};
+      setCloudBackups(backups);
+      setIsCloudBackupModalVisible(true);
+    } catch (error) {
+      console.error('Error loading cloud backups:', error);
+      Alert.alert('Ошибка', 'Не удалось загрузить список резервных копий');
+    } finally {
+      setIsLoadingBackups(false);
+    }
+  };
 
   // Восстановление из облака
   // Восстановление из облака
-const handleRestoreFromCloud = async (backup: any) => {
-  Alert.alert(
-    'Восстановление из облака',
-    `Вы уверены, что хотите восстановить данные из резервной копии от ${new Date(backup.timestamp).toLocaleString('ru-RU')}?\n\n` +
-    `📊 Транзакций в бэкапе: ${backup.transactionCount || 0}\n` +
-    `📁 Категорий: ${backup.categoryCount || 0}\n` +
-    `💰 Бюджетов: ${backup.budgetCount || 0}\n` +
-    `🎯 Целей: ${backup.goalCount || 0}\n` +
-    `⚠️ ВНИМАНИЕ: Все текущие данные будут заменены!`,
-    [
-      { text: 'Отмена', style: 'cancel' },
-      {
-        text: 'Восстановить',
-        style: 'destructive',
-        onPress: async () => {
-          setIsDownloadingFromCloud(true);
-          
-          try {
-            const backupData = backup.backupData;
-            
-            console.log('=== ДИАГНОСТИКА ВОССТАНОВЛЕНИЯ ===');
-            console.log('backup.id:', backup.id);
-            console.log('backup.transactionCount:', backup.transactionCount);
-            console.log('backup.categoryCount:', backup.categoryCount);
-            console.log('backup.budgetCount:', backup.budgetCount);
-            console.log('backup.goalCount:', backup.goalCount);
-            
-            if (!backupData) {
-              throw new Error('Неверный формат резервной копии: backupData отсутствует');
-            }
-            
-            // Проверяем разные возможные структуры данных
-            let transactions = [];
-            let categories = [];
-            let budgets = [];
-            let goals = [];
-            
-            // Вариант 1: backupData.data.transactions
-            if (backupData.data && backupData.data.transactions) {
-              transactions = backupData.data.transactions;
-              categories = backupData.data.categories || [];
-              budgets = backupData.data.budgets || [];
-              goals = backupData.data.goals || [];
-              console.log('Структура 1: backupData.data');
-            }
-            // Вариант 2: backupData.transactions
-            else if (backupData.transactions) {
-              transactions = backupData.transactions;
-              categories = backupData.categories || [];
-              budgets = backupData.budgets || [];
-              goals = backupData.goals || [];
-              console.log('Структура 2: backupData');
-            }
-            // Вариант 3: backupData.data
-            else if (backupData.data) {
-              if (Array.isArray(backupData.data)) {
-                transactions = backupData.data;
-              } else {
-                transactions = backupData.data.transactions || [];
+  const handleRestoreFromCloud = async (backup: any) => {
+    Alert.alert(
+      'Восстановление из облака',
+      `Вы уверены, что хотите восстановить данные из резервной копии от ${new Date(
+        backup.timestamp,
+      ).toLocaleString('ru-RU')}?\n\n` +
+        `📊 Транзакций в бэкапе: ${backup.transactionCount || 0}\n` +
+        `📁 Категорий: ${backup.categoryCount || 0}\n` +
+        `💰 Бюджетов: ${backup.budgetCount || 0}\n` +
+        `🎯 Целей: ${backup.goalCount || 0}\n` +
+        `⚠️ ВНИМАНИЕ: Все текущие данные будут заменены!`,
+      [
+        { text: 'Отмена', style: 'cancel' },
+        {
+          text: 'Восстановить',
+          style: 'destructive',
+          onPress: async () => {
+            setIsDownloadingFromCloud(true);
+
+            try {
+              const backupData = backup.backupData;
+
+              console.log('=== ДИАГНОСТИКА ВОССТАНОВЛЕНИЯ ===');
+              console.log('backup.id:', backup.id);
+              console.log('backup.transactionCount:', backup.transactionCount);
+              console.log('backup.categoryCount:', backup.categoryCount);
+              console.log('backup.budgetCount:', backup.budgetCount);
+              console.log('backup.goalCount:', backup.goalCount);
+
+              if (!backupData) {
+                throw new Error(
+                  'Неверный формат резервной копии: backupData отсутствует',
+                );
+              }
+
+              // Проверяем разные возможные структуры данных
+              let transactions = [];
+              let categories = [];
+              let budgets = [];
+              let goals = [];
+
+              // Вариант 1: backupData.data.transactions
+              if (backupData.data && backupData.data.transactions) {
+                transactions = backupData.data.transactions;
                 categories = backupData.data.categories || [];
                 budgets = backupData.data.budgets || [];
                 goals = backupData.data.goals || [];
+                console.log('Структура 1: backupData.data');
               }
-              console.log('Структура 3: backupData.data');
-            }
-            
-            console.log(`Найдено транзакций: ${transactions.length}`);
-            console.log(`Найдено категорий: ${categories.length}`);
-            console.log(`Найдено бюджетов: ${budgets.length}`);
-            console.log(`Найдено целей: ${goals.length}`);
-            
-            if (transactions.length === 0 && categories.length === 0 && budgets.length === 0 && goals.length === 0) {
-              throw new Error('Нет данных для восстановления');
-            }
-            
-            // Получаем существующие данные
-            const existingCategories = await database.get('categories').query().fetch();
-            const existingTransactions = await database.get('transactions').query().fetch();
-            const existingBudgets = await database.get('budgets').query().fetch();
-            const existingGoals = await database.get('goals').query().fetch();
-            
-            console.log(`Существующих категорий: ${existingCategories.length}`);
-            console.log(`Существующих транзакций: ${existingTransactions.length}`);
-            console.log(`Существующих бюджетов: ${existingBudgets.length}`);
-            console.log(`Существующих целей: ${existingGoals.length}`);
-            
-            // Удаляем существующие данные (в правильном порядке - сначала зависимые)
-            await database.write(async () => {
-              console.log('Удаление существующих транзакций...');
-              for (const tx of existingTransactions) {
-                await tx.destroyPermanently();
+              // Вариант 2: backupData.transactions
+              else if (backupData.transactions) {
+                transactions = backupData.transactions;
+                categories = backupData.categories || [];
+                budgets = backupData.budgets || [];
+                goals = backupData.goals || [];
+                console.log('Структура 2: backupData');
               }
-              console.log('Удаление существующих бюджетов...');
-              for (const budget of existingBudgets) {
-                await budget.destroyPermanently();
+              // Вариант 3: backupData.data
+              else if (backupData.data) {
+                if (Array.isArray(backupData.data)) {
+                  transactions = backupData.data;
+                } else {
+                  transactions = backupData.data.transactions || [];
+                  categories = backupData.data.categories || [];
+                  budgets = backupData.data.budgets || [];
+                  goals = backupData.data.goals || [];
+                }
+                console.log('Структура 3: backupData.data');
               }
-              console.log('Удаление существующих целей...');
-              for (const goal of existingGoals) {
-                await goal.destroyPermanently();
+
+              console.log(`Найдено транзакций: ${transactions.length}`);
+              console.log(`Найдено категорий: ${categories.length}`);
+              console.log(`Найдено бюджетов: ${budgets.length}`);
+              console.log(`Найдено целей: ${goals.length}`);
+
+              if (
+                transactions.length === 0 &&
+                categories.length === 0 &&
+                budgets.length === 0 &&
+                goals.length === 0
+              ) {
+                throw new Error('Нет данных для восстановления');
               }
-              console.log('Удаление существующих категорий...');
-              for (const category of existingCategories) {
-                await category.destroyPermanently();
-              }
-            });
-            
-            console.log('Существующие данные удалены');
-            
-            // Создаем карту старых ID -> новых ID для категорий
-            const categoryIdMap = new Map();
-            
-            // Восстанавливаем категории
-            let restoredCategories = 0;
-            if (categories.length > 0) {
+
+              // Получаем существующие данные
+              const existingCategories = await database
+                .get('categories')
+                .query()
+                .fetch();
+              const existingTransactions = await database
+                .get('transactions')
+                .query()
+                .fetch();
+              const existingBudgets = await database
+                .get('budgets')
+                .query()
+                .fetch();
+              const existingGoals = await database.get('goals').query().fetch();
+
+              console.log(
+                `Существующих категорий: ${existingCategories.length}`,
+              );
+              console.log(
+                `Существующих транзакций: ${existingTransactions.length}`,
+              );
+              console.log(`Существующих бюджетов: ${existingBudgets.length}`);
+              console.log(`Существующих целей: ${existingGoals.length}`);
+
+              // Удаляем существующие данные (в правильном порядке - сначала зависимые)
               await database.write(async () => {
-                const categoriesCollection = database.get('categories');
-                for (const cat of categories) {
-                  try {
-                    if (cat && cat.name) {
-                      const oldId = cat.id || cat._raw?.id;
-                      const newCategory = await categoriesCollection.create((record: any) => {
-                        record.name = cat.name || '';
-                        record.type = cat.type || 'expense';
-                        record.icon = cat.icon || 'help';
-                        record.color = cat.color || '#95A5A6';
-                        record.order = cat.order || 0;
-                        record.isActive = cat.isActive !== false;
-                        record.parentId = ''; // Сначала пусто, потом обновим
-                        record.createdAt = cat.createdAt || cat.created_at || Date.now();
-                        record.updatedAt = cat.updatedAt || cat.updated_at || Date.now();
-                      });
-                      // Сохраняем соответствие старого ID новому ID
-                      if (oldId) {
-                        categoryIdMap.set(oldId, newCategory.id);
-                      }
-                      restoredCategories++;
-                    } else {
-                      console.warn('Пропущена категория с некорректными данными:', cat);
-                    }
-                  } catch (catError) {
-                    console.error('Ошибка при создании категории:', catError);
-                  }
+                console.log('Удаление существующих транзакций...');
+                for (const tx of existingTransactions) {
+                  await tx.destroyPermanently();
+                }
+                console.log('Удаление существующих бюджетов...');
+                for (const budget of existingBudgets) {
+                  await budget.destroyPermanently();
+                }
+                console.log('Удаление существующих целей...');
+                for (const goal of existingGoals) {
+                  await goal.destroyPermanently();
+                }
+                console.log('Удаление существующих категорий...');
+                for (const category of existingCategories) {
+                  await category.destroyPermanently();
                 }
               });
-            }
-            
-            console.log(`Восстановлено категорий: ${restoredCategories}`);
-            console.log('Карта соответствия ID категорий:', Array.from(categoryIdMap.entries()));
-            
-            // Обновляем parentId для подкатегорий
-            if (categories.length > 0 && categoryIdMap.size > 0) {
-              await database.write(async () => {
-                const categoriesCollection = database.get('categories');
-                for (const cat of categories) {
-                  if (cat && cat.parent_id && cat.parent_id !== '') {
-                    const newParentId = categoryIdMap.get(cat.parent_id);
-                    if (newParentId) {
-                      const oldId = cat.id || cat._raw?.id;
-                      const newId = categoryIdMap.get(oldId);
-                      if (newId) {
-                        const categoryToUpdate = await categoriesCollection.find(newId);
-                        await categoryToUpdate.update((record: any) => {
-                          record.parentId = newParentId;
-                        });
-                        console.log(`Обновлен parentId для категории ${cat.name}: ${newParentId}`);
-                      }
-                    }
-                  }
-                }
-              });
-            }
-            
-            // Восстанавливаем транзакции
-            let restoredTransactions = 0;
-            if (transactions.length > 0) {
-              await database.write(async () => {
-                const transactionsCollection = database.get('transactions');
-                for (const tx of transactions) {
-                  try {
-                    if (tx && tx.amount && tx.type) {
-                      // Получаем новый ID категории
-                      let categoryId = tx.categoryId || tx.category_id || '';
-                      const mappedCategoryId = categoryIdMap.get(categoryId);
-                      
-                      await transactionsCollection.create((record: any) => {
-                        record.amount = tx.amount || 0;
-                        record.type = tx.type || 'expense';
-                        record.categoryId = mappedCategoryId || categoryId || '';
-                        record.note = tx.note || '';
-                        record.date = tx.date || Date.now();
-                        record.isRecurring = tx.isRecurring || tx.is_recurring || false;
-                        record.recurringType = tx.recurringType || tx.recurring_type || null;
-                        record.location = tx.location || null;
-                        record.createdAt = tx.createdAt || tx.created_at || Date.now();
-                        record.updatedAt = tx.updatedAt || tx.updated_at || Date.now();
-                      });
-                      restoredTransactions++;
-                    } else {
-                      console.warn('Пропущена транзакция с некорректными данными:', tx);
-                    }
-                  } catch (txError) {
-                    console.error('Ошибка при создании транзакции:', txError);
-                  }
-                }
-              });
-            }
-            
-            // Восстанавливаем бюджеты
-            let restoredBudgets = 0;
-            if (budgets.length > 0) {
-              await database.write(async () => {
-                const budgetsCollection = database.get('budgets');
-                for (const budget of budgets) {
-                  try {
-                    if (budget) {
-                      // Получаем новый ID категории
-                      let categoryId = budget.categoryId || budget.category_id || '';
-                      const mappedCategoryId = categoryIdMap.get(categoryId);
-                      
-                      if (mappedCategoryId) {
-                        await budgetsCollection.create((record: any) => {
-                          record.categoryId = mappedCategoryId;
-                          record.amount = budget.amount || 0;
-                          record.period = budget.period || 'monthly';
-                          record.month = budget.month !== undefined ? budget.month : new Date().getMonth();
-                          record.year = budget.year || new Date().getFullYear();
-                          record.isActive = budget.isActive !== false;
-                          record.createdAt = budget.createdAt || budget.created_at || Date.now();
-                          record.updatedAt = budget.updatedAt || budget.updated_at || Date.now();
-                        });
-                        restoredBudgets++;
+
+              console.log('Существующие данные удалены');
+
+              // Создаем карту старых ID -> новых ID для категорий
+              const categoryIdMap = new Map();
+
+              // Восстанавливаем категории
+              let restoredCategories = 0;
+              if (categories.length > 0) {
+                await database.write(async () => {
+                  const categoriesCollection = database.get('categories');
+                  for (const cat of categories) {
+                    try {
+                      if (cat && cat.name) {
+                        const oldId = cat.id || cat._raw?.id;
+                        const newCategory = await categoriesCollection.create(
+                          (record: any) => {
+                            record.name = cat.name || '';
+                            record.type = cat.type || 'expense';
+                            record.icon = cat.icon || 'help';
+                            record.color = cat.color || '#95A5A6';
+                            record.order = cat.order || 0;
+                            record.isActive = cat.isActive !== false;
+                            record.parentId = ''; // Сначала пусто, потом обновим
+                            record.createdAt =
+                              cat.createdAt || cat.created_at || Date.now();
+                            record.updatedAt =
+                              cat.updatedAt || cat.updated_at || Date.now();
+                          },
+                        );
+                        // Сохраняем соответствие старого ID новому ID
+                        if (oldId) {
+                          categoryIdMap.set(oldId, newCategory.id);
+                        }
+                        restoredCategories++;
                       } else {
-                        console.warn('Пропущен бюджет: не найдена категория для', categoryId);
+                        console.warn(
+                          'Пропущена категория с некорректными данными:',
+                          cat,
+                        );
                       }
-                    } else {
-                      console.warn('Пропущен бюджет с некорректными данными:', budget);
+                    } catch (catError) {
+                      console.error('Ошибка при создании категории:', catError);
                     }
-                  } catch (budgetError) {
-                    console.error('Ошибка при создании бюджета:', budgetError);
                   }
-                }
-              });
-            }
-            
-            // Восстанавливаем цели
-            let restoredGoals = 0;
-            if (goals.length > 0) {
-              await database.write(async () => {
-                const goalsCollection = database.get('goals');
-                for (const goal of goals) {
-                  try {
-                    if (goal && goal.name) {
-                      await goalsCollection.create((record: any) => {
-                        record.name = goal.name || '';
-                        record.targetAmount = goal.targetAmount || goal.target_amount || 0;
-                        record.currentAmount = goal.currentAmount || goal.current_amount || 0;
-                        record.deadline = goal.deadline || Date.now() + 365 * 24 * 60 * 60 * 1000;
-                        record.icon = goal.icon || 'flag';
-                        record.color = goal.color || '#4CAF50';
-                        record.isCompleted = goal.isCompleted || goal.is_completed || false;
-                        record.createdAt = goal.createdAt || goal.created_at || Date.now();
-                        record.updatedAt = goal.updatedAt || goal.updated_at || Date.now();
-                      });
-                      restoredGoals++;
-                    } else {
-                      console.warn('Пропущена цель с некорректными данными:', goal);
+                });
+              }
+
+              console.log(`Восстановлено категорий: ${restoredCategories}`);
+              console.log(
+                'Карта соответствия ID категорий:',
+                Array.from(categoryIdMap.entries()),
+              );
+
+              // Обновляем parentId для подкатегорий
+              if (categories.length > 0 && categoryIdMap.size > 0) {
+                await database.write(async () => {
+                  const categoriesCollection = database.get('categories');
+                  for (const cat of categories) {
+                    if (cat && cat.parent_id && cat.parent_id !== '') {
+                      const newParentId = categoryIdMap.get(cat.parent_id);
+                      if (newParentId) {
+                        const oldId = cat.id || cat._raw?.id;
+                        const newId = categoryIdMap.get(oldId);
+                        if (newId) {
+                          const categoryToUpdate =
+                            await categoriesCollection.find(newId);
+                          await categoryToUpdate.update((record: any) => {
+                            record.parentId = newParentId;
+                          });
+                          console.log(
+                            `Обновлен parentId для категории ${cat.name}: ${newParentId}`,
+                          );
+                        }
+                      }
                     }
-                  } catch (goalError) {
-                    console.error('Ошибка при создании цели:', goalError);
                   }
-                }
-              });
+                });
+              }
+
+              // Восстанавливаем транзакции
+              let restoredTransactions = 0;
+              if (transactions.length > 0) {
+                await database.write(async () => {
+                  const transactionsCollection = database.get('transactions');
+                  for (const tx of transactions) {
+                    try {
+                      if (tx && tx.amount && tx.type) {
+                        // Получаем новый ID категории
+                        let categoryId = tx.categoryId || tx.category_id || '';
+                        const mappedCategoryId = categoryIdMap.get(categoryId);
+
+                        await transactionsCollection.create((record: any) => {
+                          record.amount = tx.amount || 0;
+                          record.type = tx.type || 'expense';
+                          record.categoryId =
+                            mappedCategoryId || categoryId || '';
+                          record.note = tx.note || '';
+                          record.date = tx.date || Date.now();
+                          record.isRecurring =
+                            tx.isRecurring || tx.is_recurring || false;
+                          record.recurringType =
+                            tx.recurringType || tx.recurring_type || null;
+                          record.location = tx.location || null;
+                          record.createdAt =
+                            tx.createdAt || tx.created_at || Date.now();
+                          record.updatedAt =
+                            tx.updatedAt || tx.updated_at || Date.now();
+                        });
+                        restoredTransactions++;
+                      } else {
+                        console.warn(
+                          'Пропущена транзакция с некорректными данными:',
+                          tx,
+                        );
+                      }
+                    } catch (txError) {
+                      console.error('Ошибка при создании транзакции:', txError);
+                    }
+                  }
+                });
+              }
+
+              // Восстанавливаем бюджеты
+              let restoredBudgets = 0;
+              if (budgets.length > 0) {
+                await database.write(async () => {
+                  const budgetsCollection = database.get('budgets');
+                  for (const budget of budgets) {
+                    try {
+                      if (budget) {
+                        // Получаем новый ID категории
+                        let categoryId =
+                          budget.categoryId || budget.category_id || '';
+                        const mappedCategoryId = categoryIdMap.get(categoryId);
+
+                        if (mappedCategoryId) {
+                          await budgetsCollection.create((record: any) => {
+                            record.categoryId = mappedCategoryId;
+                            record.amount = budget.amount || 0;
+                            record.period = budget.period || 'monthly';
+                            record.month =
+                              budget.month !== undefined
+                                ? budget.month
+                                : new Date().getMonth();
+                            record.year =
+                              budget.year || new Date().getFullYear();
+                            record.isActive = budget.isActive !== false;
+                            record.createdAt =
+                              budget.createdAt ||
+                              budget.created_at ||
+                              Date.now();
+                            record.updatedAt =
+                              budget.updatedAt ||
+                              budget.updated_at ||
+                              Date.now();
+                          });
+                          restoredBudgets++;
+                        } else {
+                          console.warn(
+                            'Пропущен бюджет: не найдена категория для',
+                            categoryId,
+                          );
+                        }
+                      } else {
+                        console.warn(
+                          'Пропущен бюджет с некорректными данными:',
+                          budget,
+                        );
+                      }
+                    } catch (budgetError) {
+                      console.error(
+                        'Ошибка при создании бюджета:',
+                        budgetError,
+                      );
+                    }
+                  }
+                });
+              }
+
+              // Восстанавливаем цели
+              let restoredGoals = 0;
+              if (goals.length > 0) {
+                await database.write(async () => {
+                  const goalsCollection = database.get('goals');
+                  for (const goal of goals) {
+                    try {
+                      if (goal && goal.name) {
+                        await goalsCollection.create((record: any) => {
+                          record.name = goal.name || '';
+                          record.targetAmount =
+                            goal.targetAmount || goal.target_amount || 0;
+                          record.currentAmount =
+                            goal.currentAmount || goal.current_amount || 0;
+                          record.deadline =
+                            goal.deadline ||
+                            Date.now() + 365 * 24 * 60 * 60 * 1000;
+                          record.icon = goal.icon || 'flag';
+                          record.color = goal.color || '#4CAF50';
+                          record.isCompleted =
+                            goal.isCompleted || goal.is_completed || false;
+                          record.createdAt =
+                            goal.createdAt || goal.created_at || Date.now();
+                          record.updatedAt =
+                            goal.updatedAt || goal.updated_at || Date.now();
+                        });
+                        restoredGoals++;
+                      } else {
+                        console.warn(
+                          'Пропущена цель с некорректными данными:',
+                          goal,
+                        );
+                      }
+                    } catch (goalError) {
+                      console.error('Ошибка при создании цели:', goalError);
+                    }
+                  }
+                });
+              }
+
+              await loadTransactionCount();
+
+              console.log('=== ИТОГИ ВОССТАНОВЛЕНИЯ ===');
+              console.log(`Восстановлено категорий: ${restoredCategories}`);
+              console.log(`Восстановлено транзакций: ${restoredTransactions}`);
+              console.log(`Восстановлено бюджетов: ${restoredBudgets}`);
+              console.log(`Восстановлено целей: ${restoredGoals}`);
+
+              Alert.alert(
+                '✅ Восстановление завершено',
+                `Восстановлено:\n` +
+                  `📁 Категорий: ${restoredCategories}\n` +
+                  `📊 Транзакций: ${restoredTransactions}\n` +
+                  `💰 Бюджетов: ${restoredBudgets}\n` +
+                  `🎯 Целей: ${restoredGoals}\n\n` +
+                  `Приложение будет перезапущено`,
+              );
+
+              navigation.replace('Main');
+            } catch (error: any) {
+              console.error('Cloud restore error:', error);
+              Alert.alert(
+                'Ошибка',
+                error?.message || 'Не удалось восстановить данные из облака',
+              );
+            } finally {
+              setIsDownloadingFromCloud(false);
+              setIsCloudBackupModalVisible(false);
             }
-            
-            await loadTransactionCount();
-            
-            console.log('=== ИТОГИ ВОССТАНОВЛЕНИЯ ===');
-            console.log(`Восстановлено категорий: ${restoredCategories}`);
-            console.log(`Восстановлено транзакций: ${restoredTransactions}`);
-            console.log(`Восстановлено бюджетов: ${restoredBudgets}`);
-            console.log(`Восстановлено целей: ${restoredGoals}`);
-            
-            Alert.alert(
-              '✅ Восстановление завершено',
-              `Восстановлено:\n` +
-              `📁 Категорий: ${restoredCategories}\n` +
-              `📊 Транзакций: ${restoredTransactions}\n` +
-              `💰 Бюджетов: ${restoredBudgets}\n` +
-              `🎯 Целей: ${restoredGoals}\n\n` +
-              `Приложение будет перезапущено`
-            );
-            
-            navigation.replace('Main');
-            
-          } catch (error: any) {
-            console.error('Cloud restore error:', error);
-            Alert.alert('Ошибка', error?.message || 'Не удалось восстановить данные из облака');
-          } finally {
-            setIsDownloadingFromCloud(false);
-            setIsCloudBackupModalVisible(false);
-          }
+          },
         },
-      },
-    ],
-  );
-};
+      ],
+    );
+  };
   // Удаление облачной резервной копии
   const handleDeleteCloudBackup = async (backup: any) => {
     Alert.alert(
@@ -706,29 +784,58 @@ const handleRestoreFromCloud = async (backup: any) => {
                 >
                   <View style={styles.backupInfo}>
                     <Icon name="cloud-check" size={24} color={colors.success} />
-                   <View style={styles.backupDetails}>
-  <Text style={[styles.backupDate, { color: colors.text.primary }]}>
-    {new Date(backup.timestamp).toLocaleDateString('ru-RU', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })}
-  </Text>
-  <Text style={[styles.backupMeta, { color: colors.text.secondary }]}>
-    📁 {backup.categoryCount || 0} категорий
-  </Text>
-  <Text style={[styles.backupMeta, { color: colors.text.secondary }]}>
-    📊 {backup.transactionCount || 0} транзакций
-  </Text>
-  <Text style={[styles.backupMeta, { color: colors.text.secondary }]}>
-    💰 {backup.budgetCount || 0} бюджетов • 🎯 {backup.goalCount || 0} целей
-  </Text>
-  <Text style={[styles.backupSize, { color: colors.text.secondary }]}>
-    Размер: {((backup.fileSize || 0) / 1024).toFixed(2)} KB
-  </Text>
-</View>
+                    <View style={styles.backupDetails}>
+                      <Text
+                        style={[
+                          styles.backupDate,
+                          { color: colors.text.primary },
+                        ]}
+                      >
+                        {new Date(backup.timestamp).toLocaleDateString(
+                          'ru-RU',
+                          {
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          },
+                        )}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.backupMeta,
+                          { color: colors.text.secondary },
+                        ]}
+                      >
+                        📁 {backup.categoryCount || 0} категорий
+                      </Text>
+                      <Text
+                        style={[
+                          styles.backupMeta,
+                          { color: colors.text.secondary },
+                        ]}
+                      >
+                        📊 {backup.transactionCount || 0} транзакций
+                      </Text>
+                      <Text
+                        style={[
+                          styles.backupMeta,
+                          { color: colors.text.secondary },
+                        ]}
+                      >
+                        💰 {backup.budgetCount || 0} бюджетов • 🎯{' '}
+                        {backup.goalCount || 0} целей
+                      </Text>
+                      <Text
+                        style={[
+                          styles.backupSize,
+                          { color: colors.text.secondary },
+                        ]}
+                      >
+                        Размер: {((backup.fileSize || 0) / 1024).toFixed(2)} KB
+                      </Text>
+                    </View>
                   </View>
                   <View style={styles.backupActions}>
                     <TouchableOpacity
@@ -978,14 +1085,13 @@ const handleRestoreFromCloud = async (backup: any) => {
       activeOpacity={0.7}
     >
       <View style={styles.settingLeft}>
-         {
-        icon !== 'file-csv' ? (
-        <Icon
-          name={icon}
-          size={24}
-          color={danger ? colors.error : colors.primary}
-        />
-         ) : (
+        {icon !== 'file-csv' ? (
+          <Icon
+            name={icon}
+            size={24}
+            color={danger ? colors.error : colors.primary}
+          />
+        ) : (
           <FontAwesome6Icon
             name={icon}
             size={20}
@@ -1147,6 +1253,32 @@ const handleRestoreFromCloud = async (backup: any) => {
           </>,
         )}
 
+        {renderSection(
+          'Банки и синхронизация',
+          <>
+            {renderSettingItem(
+              'bank-plus',
+              'Подключить банк',
+              <Icon
+                name="chevron-right"
+                size={20}
+                color={colors.text.secondary}
+              />,
+              () => setShowBankWizard(true),
+            )}
+            {renderSettingItem(
+              'bank',
+              'Управление банками',
+              <Icon
+                name="chevron-right"
+                size={20}
+                color={colors.text.secondary}
+              />,
+              () => setShowBanksManager(true),
+            )}
+          </>,
+        )}
+
         {/* Управление данными */}
         {renderSection(
           'Управление данными',
@@ -1189,7 +1321,7 @@ const handleRestoreFromCloud = async (backup: any) => {
               style={[styles.divider, { backgroundColor: colors.border }]}
             />
 
-            {renderSettingItem(
+            {/* {renderSettingItem(
               'download',
               'Резервная копия (JSON)',
               isExportingJSON ? (
@@ -1204,8 +1336,8 @@ const handleRestoreFromCloud = async (backup: any) => {
               handleExportJSON,
               false,
               'Экспорт на устройство',
-            )}
-            {renderSettingItem(
+            )} */}
+            {/* {renderSettingItem(
               'restore',
               'Восстановить из JSON',
               isImporting ? (
@@ -1220,8 +1352,8 @@ const handleRestoreFromCloud = async (backup: any) => {
               handleImportJSON,
               false,
               'Восстановить из файла на устройстве',
-            )}
-            {renderSettingItem(
+            )} */}
+            {/* {renderSettingItem(
               'file-csv',
               'Импорт CSV из банка',
               <Icon
@@ -1232,7 +1364,7 @@ const handleRestoreFromCloud = async (backup: any) => {
               () => setShowCSVImport(true),
               false,
               'Импорт выписки из банка',
-            )}
+            )} */}
             {renderSettingItem(
               'format-list-bulleted',
               'Управление категориями',
@@ -1363,7 +1495,7 @@ const handleRestoreFromCloud = async (backup: any) => {
                                   const result =
                                     await backupService.clearAllData();
                                   if (result.success) {
-                                    seedCategoriesData()
+                                    seedCategoriesData();
                                     Alert.alert('✅ Готово', result.message);
                                     navigation.replace('Main');
                                   } else {
@@ -1445,14 +1577,27 @@ const handleRestoreFromCloud = async (backup: any) => {
       {/* Модальное окно облачных бэкапов */}
       {renderCloudBackupModal()}
 
-      <CSVImportWizard
+      {/* <CSVImportWizard
         visible={showCSVImport}
         onClose={() => setShowCSVImport(false)}
         onSuccess={() => {
           Alert.alert('Успешно', 'Транзакции импортированы');
           loadTransactionCount();
         }}
-      />
+      /> */}
+     {showBankWizard && <BankConnectionWizard
+        visible={showBankWizard}
+        onClose={() => setShowBankWizard(false)}
+        onSuccess={() => {
+          // Alert.alert('Успешно', 'Банк подключен');
+          setShowBanksManager(true);
+        }}
+      />}
+
+     {showBanksManager && <ConnectedBanksManager
+        visible={showBanksManager}
+        onClose={() => setShowBanksManager(false)}
+      />}
     </View>
   );
 };

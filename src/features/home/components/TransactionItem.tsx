@@ -1,11 +1,7 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import SimpleLineIcons from 'react-native-vector-icons/SimpleLineIcons';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { useTheme } from '../../../core/hooks/useTheme';
 import { formatCurrency, formatDate } from '../../../core/utils/formatters';
@@ -48,14 +44,14 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
 
   const amountColor = type === 'income' ? colors.success : colors.error;
   const amountPrefix = type === 'income' ? '+' : '-';
-  
+
   const getFormattedDate = () => {
     if (!date || isNaN(date)) {
       return 'Дата не указана';
     }
     return formatDate(date);
   };
-  
+
   const getFormattedAmount = () => {
     if (!amount || isNaN(amount)) {
       return '0 ₽';
@@ -84,11 +80,16 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
             { backgroundColor: categoryColor + '20' },
           ]}
         >
-          <Icon
-            name={categoryIcon}
-            size={24}
-            color={categoryColor}
-          />
+          {categoryIcon !== 'help-circle' ? (
+            <Icon name={categoryIcon} size={24} color={categoryColor} />
+          ) : (
+            <SimpleLineIcons
+              name={'tag'}
+              size={20}
+              color={'gray'}
+              style={{ transform: [{ scaleX: -1 }] }}
+            />
+          )}
         </View>
 
         <View style={styles.details}>
@@ -96,7 +97,10 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
             {categoryName}
           </Text>
           {note ? (
-            <Text style={[styles.note, { color: colors.text.secondary }]} numberOfLines={1}>
+            <Text
+              style={[styles.note, { color: colors.text.secondary }]}
+              numberOfLines={1}
+            >
               {note}
             </Text>
           ) : null}
@@ -106,7 +110,8 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
         </View>
 
         <Text style={[styles.amount, { color: amountColor }]}>
-          {amountPrefix}{getFormattedAmount()}
+          {amountPrefix}
+          {getFormattedAmount()}
         </Text>
       </TouchableOpacity>
     </Swipeable>

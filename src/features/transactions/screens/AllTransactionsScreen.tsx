@@ -16,6 +16,7 @@ import { TransactionItem } from '../../home/components/TransactionItem';
 import transactionService from '../../../core/services/transaction.service';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import categoryService from '../../../core/services/category.service';
+import { useIsFocused } from '@react-navigation/native';
 
 interface AllTransactionsScreenProps {
   navigation: any;
@@ -33,6 +34,7 @@ export const AllTransactionsScreen: React.FC<AllTransactionsScreenProps> = ({
   route,
 }) => {
   const { colors } = useTheme();
+  const isFocus = useIsFocused();
   const { initialTransactions = [] } = route.params;
 
   const [transactions, setTransactions] = useState<any[]>(initialTransactions);
@@ -366,7 +368,7 @@ const searchTransactions = useCallback(
         clearTimeout(searchTimeoutRef.current);
       }
     };
-  }, []);
+  }, [isFocus]);
 
   const handleTransactionPress = (transaction: any) => {
     navigation.navigate('TransactionDetail', { transactionId: transaction.id });
